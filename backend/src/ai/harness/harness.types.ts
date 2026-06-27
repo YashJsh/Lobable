@@ -51,9 +51,17 @@ interface ToolImplementation{
   implementation: (args: unknown) => Promise<any>,
 }
 
+
 interface ModelProvider {
   name: () => string,
-  chat : (message : Message[], tools : ToolDefiniton[]) => Promise<any>
+  chat : (message : Message[], tools : ToolDefiniton[]) => Promise<ReturnedResponse>
+}
+
+interface ReturnedResponse{
+  role : "assistant",
+  content: string | null,
+  finishReason: "stop" | "length" | "tool_calls" | "content_filter" | "function_call",
+  tool_call? : ToolCall[]
 }
 
 export type {
@@ -61,5 +69,6 @@ export type {
   ToolDefiniton,
   ToolCall,
   ModelProvider,
-  ToolImplementation
+  ToolImplementation,
+  ReturnedResponse
 }
