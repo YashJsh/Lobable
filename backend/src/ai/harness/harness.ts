@@ -3,6 +3,7 @@ import { userMessage } from "../utils";
 import OpenAIProvider from "../providers/openai";
 import { toolsDefinition } from "../tools/toolDefinition";
 import { mainAgentTools } from "../tools/toolImplementation";
+import { MAIN_AGENT_SYSTEM_PROMPT } from "../prompt/mainAgentPrompt";
 
 class Harness{
   private provider: ModelProvider;
@@ -10,10 +11,13 @@ class Harness{
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
   
-  constructor(provider: ModelProvider, toolDefinition : ToolDefiniton[], toolImplementation: ToolImplementation[]) {
+  constructor(provider: ModelProvider, toolDefinition : ToolDefiniton[], toolImplementation: ToolImplementation[], prompt : string) {
     this.provider = provider
     this.toolDefinition = toolDefinition
-    this.transcript = []
+    this.transcript = [{
+      role: "system",
+      content : prompt
+    }]
     this.toolImplementation = toolImplementation
   };
 
@@ -50,5 +54,5 @@ class Harness{
 }
 
 const provider = new OpenAIProvider(1, "gpt-4.1-mini");
-export const harness = new Harness(provider, toolsDefinition, mainAgentTools);
+export const harness = new Harness(provider, toolsDefinition, mainAgentTools, MAIN_AGENT_SYSTEM_PROMPT);
 export { Harness };
