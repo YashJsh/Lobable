@@ -1,4 +1,4 @@
-type Message = UserMessage | AssistantMessage | ToolMessage | SystemMessage
+type Message = UserMessage |  ToolMessage | SystemMessage| AssistantMessage
 
 interface UserMessage {
   role: "user",
@@ -25,7 +25,7 @@ interface ToolMessage {
 }
 
 interface ToolDefiniton{
-  type: string,
+  type: "function",
   function: {
     name: string,
     description: string,
@@ -46,6 +46,11 @@ interface ToolCall{
   },
 }
 
+interface ToolImplementation{
+  name: string,
+  implementation: (args: unknown) => Promise<any>,
+}
+
 interface ModelProvider {
   name: () => string,
   chat : (message : Message[], tools : ToolDefiniton[]) => Promise<any>
@@ -56,4 +61,5 @@ export type {
   ToolDefiniton,
   ToolCall,
   ModelProvider,
+  ToolImplementation
 }

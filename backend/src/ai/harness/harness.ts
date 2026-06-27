@@ -1,16 +1,17 @@
-import type { Message, ModelProvider, ToolDefiniton } from "./harness.types";
-import { toolsDefinition } from "../tools/tools";
+import type { Message, ModelProvider, ToolDefiniton, ToolImplementation } from "./harness.types";
 import { userMessage } from "../utils";
 
 class Harness{
   private provider: ModelProvider;
   private transcript: Message[];
-  public toolDefinition: ToolDefiniton[];
+  private toolDefinition: ToolDefiniton[];
+  private toolImplementation: ToolImplementation[];
   
-  constructor(provider: ModelProvider) {
+  constructor(provider: ModelProvider, toolDefinition : ToolDefiniton[], toolImplementation: ToolImplementation[]) {
     this.provider = provider
-    this.toolDefinition = toolsDefinition
+    this.toolDefinition = toolDefinition
     this.transcript = []
+    this.toolImplementation = toolImplementation
   };
 
   async sendMessage(input: string) {
@@ -26,5 +27,6 @@ class Harness{
       }
     }
   }
-  
 }
+
+export default Harness;
