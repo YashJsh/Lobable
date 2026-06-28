@@ -56,7 +56,7 @@ interface ToolImplementation{
 
 interface ModelProvider {
   name: () => string,
-  chat : (message : Message[], tools : ToolDefiniton[]) => Promise<ReturnedResponse>
+  chat : (message : Message[], tools : ToolDefiniton[]) => Promise<ReturnedResponse | void> 
 }
 
 interface ReturnedResponse{

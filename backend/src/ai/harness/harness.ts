@@ -4,21 +4,21 @@ import type {
   ToolDefiniton,
   ToolImplementation,
 } from "./harness.types";
-import { userMessage } from "../utils";
+import { assistantMessage, returnedAssistantMessage, userMessage } from "../utils";
 
 class Harness {
   private provider: ModelProvider;
   private transcript: Message[];
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
-  private onEvent?: (event : any) => void;
+  private onEvent?: (event : string) => void;
 
   constructor(
     provider: ModelProvider,
     toolDefinition: ToolDefiniton[],
     toolImplementation: ToolImplementation[],
     prompt: string,
-    onEvent?: (event : any) => void
+    onEvent?: (event : string) => void
   ) {
     this.provider = provider;
     this.toolDefinition = toolDefinition;
@@ -39,14 +39,20 @@ class Harness {
         this.transcript,
         this.toolDefinition,
       );
-      if (this.onEvent) {
-        this.onEvent(result);
+      if (!result) {
+        console.log("No response from AI");
+        return;
       }
-      this.transcript.push(result);
+      if (this.onEvent) {
+        this.onEvent(JSON.stringify(result));
+      }
+      console.log("[Harness Response]: ", result);
+      this.transcript.push(returnedAssistantMessage(result.content, result.tool_call));
       if (result.finishReason == "stop") {
-        return result.content;
+        return result.content || "";
       }
       if (result.finishReason == "tool_calls") {
+        console.log(`[Harness]: Implementing Tool Calls`);
         const toolResults = await Promise.all(
           (result.tool_call ?? []).map(async (tool) => {
             const match = this.toolImplementation.find(

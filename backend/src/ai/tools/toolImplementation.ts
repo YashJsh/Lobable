@@ -13,6 +13,7 @@ const spwaningSubAgent = async (args: unknown, options?: {
     emit?: (event : any) => void;
   }
 ) => {
+  console.log(`[Spawning Sub Agent] : args are : `, args);
   try {
     const {task, description} = args as {
       task: string,
@@ -20,7 +21,6 @@ const spwaningSubAgent = async (args: unknown, options?: {
     }
     const provider = new OpenAIProvider(1, "gpt-4.1-mini");
     const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT, options?.emit);
-    
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
   } catch (error: any) {
@@ -98,7 +98,6 @@ const mainAgentTools: ToolImplementation[] = [
     implementation : askQuestions
   }
 ];
-
 export {
   mainAgentTools,
 };

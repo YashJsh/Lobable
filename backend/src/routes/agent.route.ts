@@ -12,7 +12,13 @@ const router = Router();
 
 export const clientMap = new Map<string, Response>();
 
-router.post("/create", async (req : Request, res : Response) => {
+router.post("/create", async (req: Request, res: Response) => {
+  console.log("Reached");
+  const body = req.body;
+  if (!body.prompt) {
+    return res.status(400).send("prompt is required");
+  }
+  
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -30,13 +36,11 @@ router.post("/create", async (req : Request, res : Response) => {
 
   const projectId = crypto.randomUUID().toString();
   clientMap.set(projectId, res);
-  const { prompt } = req.body;
-  if (!prompt) {
-    return res.status(400).send("prompt is required");
-  }
-  const response = await harness.sendMessage(prompt);
+  
+  
+  const response = await harness.sendMessage(body.prompt);
   res.write(`
-    ${response}\n\n
+    ${JSON.stringify(response)}\n\n
     `)
   res.end();
 });

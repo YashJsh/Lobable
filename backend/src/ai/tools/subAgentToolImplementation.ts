@@ -2,7 +2,8 @@ import { exec } from "child_process";
 import fs from "fs/promises";
 import type { ToolImplementation } from "../harness/harness.types";
 
-const bashToolImplementation = async (args : unknown) => {
+const bashToolImplementation = async (args: unknown) => {
+  console.log("[subAgent] : [Bash command Tool]")
   const { command } = args as {
     command: string
   };
@@ -23,6 +24,7 @@ const bashToolImplementation = async (args : unknown) => {
 };
 
 const writeCommand = async (args: unknown) => {
+  console.log("[subAgent] : [Write command Tool]")
   const { path, content } = args as {
     path: string,
     content: string
@@ -36,12 +38,14 @@ const writeCommand = async (args: unknown) => {
 };
 
 const readCommand = async (args: unknown) => {
+  console.log("[subAgent] : [Read command Tool]")
   const { path } = args as { path : string} 
   const result = await fs.readFile(path, "utf-8");
   return result;
 };
 
 const editCommand = async (args: unknown) => {
+  console.log("[subAgent] : [Called edit Tool]")
   const { path, old_str, new_str } = args as {
     path: string,
     old_str: string,
@@ -50,25 +54,35 @@ const editCommand = async (args: unknown) => {
   let read = await fs.readFile(path, "utf-8");
   let old_str_new = old_str.trim();
   let m = (read.match(new RegExp(old_str_new, "g"))|| []).length;
-  console.log(m);
   if (m == 1) {
     read = read.replace(old_str, new_str);
     fs.writeFile(path, read);
     console.log("replaced");
-    return;
+    return "Replaced data successfully";
   } else if (m == 0) {
-    console.log("No data found");
-    return;
+    return "No data found";
   } else {
-    console.log("Argument is present more than once");
+    return "Argument is present more than once";
   }
 }
 
 const subAgentTools: ToolImplementation[] = [
-  { name: "bashTool", implementation: bashToolImplementation },
-  { name: "writeCommand", implementation: writeCommand },
-  { name: "readCommand", implementation: readCommand },
-  { name : "editTool", implementation : editCommand }
+  {
+    name: "bash_tool",
+    implementation: bashToolImplementation
+  },
+  {
+    name: "write_file",
+    implementation: writeCommand
+  },
+  {
+    name: "read_file",
+    implementation: readCommand
+  },
+  {
+    name: "editTool",
+    implementation: editCommand
+  }
 ];
 
 export {

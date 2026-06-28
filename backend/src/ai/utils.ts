@@ -1,17 +1,28 @@
-import type { Message } from "./harness/harness.types";
+import type { Message, ToolCall } from "./harness/harness.types";
 
 const userMessage = (input: string): Message => {
-    return {
-        role: "user",
-        content: input,
-    };
-}
+  return {
+    role: "user",
+    content: input,
+  };
+};
 
 const assistantMessage = (input: string): Message => {
-    return {
-        role: "assistant",
-        content: input,
-    };
-}
+  return {
+    role: "assistant",
+    content: input,
+  };
+};
 
-export { userMessage, assistantMessage };
+const returnedAssistantMessage = (
+  content: string | null,
+  tool_calls?: ToolCall[] | undefined,
+): Message => {
+  return {
+    role: "assistant",
+    content,
+    tool_calls,
+  };
+};
+
+export { userMessage, assistantMessage, returnedAssistantMessage };
