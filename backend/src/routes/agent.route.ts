@@ -30,7 +30,7 @@ router.post("/create", async (req: Request, res: Response) => {
     mainAgentTools,
     MAIN_AGENT_SYSTEM_PROMPT,
     (event) => {
-      res.write(event);
+      res.write(`data: ${event}\n\n`);
     }
   );
 
@@ -39,9 +39,7 @@ router.post("/create", async (req: Request, res: Response) => {
   
   
   const response = await harness.sendMessage(body.prompt);
-  res.write(`
-    ${JSON.stringify(response)}\n\n
-    `)
+  res.write(`data: ${response}\n\n`);
   res.end();
 });
 

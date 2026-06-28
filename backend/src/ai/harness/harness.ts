@@ -44,6 +44,7 @@ class Harness {
         return;
       }
       if (this.onEvent) {
+        console.log("onEventCalled");
         this.onEvent(JSON.stringify(result));
       }
       console.log("[Harness Response]: ", result);
