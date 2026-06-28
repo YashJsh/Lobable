@@ -5,22 +5,20 @@ import type {
   ToolImplementation,
 } from "./harness.types";
 import { userMessage } from "../utils";
-import OpenAIProvider from "../providers/openai";
-import { toolsDefinition } from "../tools/toolDefinition";
-import { mainAgentTools } from "../tools/toolImplementation";
-import { MAIN_AGENT_SYSTEM_PROMPT } from "../prompt/mainAgentPrompt";
 
 class Harness {
   private provider: ModelProvider;
   private transcript: Message[];
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
+  private onEvent?: (event : any) => void;
 
   constructor(
     provider: ModelProvider,
     toolDefinition: ToolDefiniton[],
     toolImplementation: ToolImplementation[],
     prompt: string,
+    onEvent?: (event : any) => void
   ) {
     this.provider = provider;
     this.toolDefinition = toolDefinition;
@@ -31,6 +29,7 @@ class Harness {
       },
     ];
     this.toolImplementation = toolImplementation;
+    this.onEvent = onEvent;
   }
 
   async sendMessage(input: string) {
@@ -40,7 +39,9 @@ class Harness {
         this.transcript,
         this.toolDefinition,
       );
-
+      if (this.onEvent) {
+        this.onEvent(result);
+      }
       this.transcript.push(result);
       if (result.finishReason == "stop") {
         return result.content;
@@ -63,6 +64,7 @@ class Harness {
             try {
               const toolOutput = await match.implementation(
                 JSON.parse(tool.function.arguments),
+                { emit : this.onEvent }
               );
               return {
                 role: "tool" as const,
@@ -85,11 +87,5 @@ class Harness {
   }
 }
 
-const provider = new OpenAIProvider(1, "gpt-4.1-mini");
-export const harness = new Harness(
-  provider,
-  toolsDefinition,
-  mainAgentTools,
-  MAIN_AGENT_SYSTEM_PROMPT,
-);
+
 export { Harness };

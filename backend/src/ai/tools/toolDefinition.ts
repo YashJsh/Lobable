@@ -117,6 +117,31 @@ const subAgentToolDefinition: ToolDefiniton[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "editTool",
+      description: "This tools edits a file",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description : "This path of the file"
+          },
+          old_str: {
+            type: "string",
+            description : "Exact contents of the file to replace"
+          },
+          new_str: {
+            type: "string",
+            description : "New content of the file to replace with old ones."
+          }
+        },
+        required : ["path", "old_str", "new_str"]
+      }
+    }
+  }
 ]
 
 

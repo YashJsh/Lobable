@@ -41,10 +41,34 @@ const readCommand = async (args: unknown) => {
   return result;
 };
 
+const editCommand = async (args: unknown) => {
+  const { path, old_str, new_str } = args as {
+    path: string,
+    old_str: string,
+    new_str: string
+  };
+  let read = await fs.readFile(path, "utf-8");
+  let old_str_new = old_str.trim();
+  let m = (read.match(new RegExp(old_str_new, "g"))|| []).length;
+  console.log(m);
+  if (m == 1) {
+    read = read.replace(old_str, new_str);
+    fs.writeFile(path, read);
+    console.log("replaced");
+    return;
+  } else if (m == 0) {
+    console.log("No data found");
+    return;
+  } else {
+    console.log("Argument is present more than once");
+  }
+}
+
 const subAgentTools: ToolImplementation[] = [
   { name: "bashTool", implementation: bashToolImplementation },
   { name: "writeCommand", implementation: writeCommand },
   { name: "readCommand", implementation: readCommand },
+  { name : "editTool", implementation : editCommand }
 ];
 
 export {

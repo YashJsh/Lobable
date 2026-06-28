@@ -1,7 +1,12 @@
 import { Router } from "express";
-import { harness } from "../ai/harness/harness";
+
 import type { Request, Response } from "express";
 import { resolveResponse } from "../utils/pendingResponse";
+import OpenAIProvider from "../ai/providers/openai";
+import { Harness } from "../ai/harness/harness";
+import { toolsDefinition } from "../ai/tools/toolDefinition";
+import { mainAgentTools } from "../ai/tools/toolImplementation";
+import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 
 const router = Router();
 
@@ -12,8 +17,19 @@ router.post("/create", async (req : Request, res : Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  const roomId = crypto.randomUUID().toString();
-  clientMap.set(roomId, res);
+  const provider = new OpenAIProvider(1, "gpt-4.1-mini");
+  const harness = new Harness(
+    provider,
+    toolsDefinition,
+    mainAgentTools,
+    MAIN_AGENT_SYSTEM_PROMPT,
+    (event) => {
+      res.write(event);
+    }
+  );
+
+  const projectId = crypto.randomUUID().toString();
+  clientMap.set(projectId, res);
   const { prompt } = req.body;
   if (!prompt) {
     return res.status(400).send("prompt is required");

@@ -6,18 +6,20 @@ import OpenAIProvider from "../providers/openai";
 import { subAgentToolsImplementation } from "./subAgentToolImplementation";
 import { subAgentToolDefinition } from "./toolDefinition";
 import { TODO_AGENT_SYSTEM_PROMPT } from "../prompt/todoAgentSystemPrompt";
-import { clientMap } from "../../routes/agent.route";
 import { waitForResponse } from "../../utils/pendingResponse";
 
 
-const spwaningSubAgent = async (args: unknown) => {
+const spwaningSubAgent = async (args: unknown, options?: {
+    emit?: (event : any) => void;
+  }
+) => {
   try {
     const {task, description} = args as {
       task: string,
       description : string,
     }
     const provider = new OpenAIProvider(1, "gpt-4.1-mini");
-    const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT);
+    const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT, options?.emit);
     
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
@@ -57,23 +59,23 @@ const create_todo = async (args: unknown) => {
  }
 }
 
-const askQuestions = async (args: unknown) => {
+const askQuestions = async (args: unknown, options?: {
+    emit?: (event : any) => void;
+  }) => {
   try {
     const { question } = args as {
       question : string
     }
     const correlationId = crypto.randomUUID();
-    const clients = clientMap.get('room_id');
-    if (!clients) {
-      return "Client doesn't exists";
+    if (options?.emit) {
+      options.emit(
+        `event: connected\n` +
+          `data: ${JSON.stringify({
+            correlationId,
+            question,
+          })}\n\n`,
+      )
     }
-    clients.write(
-      `event: connected\n` +
-        `data: ${JSON.stringify({
-          correlationId,
-          question,
-        })}\n\n`,
-    );
     const response = await waitForResponse(correlationId);
     console.log("Recieved response is : ", response);
     return response as string;
