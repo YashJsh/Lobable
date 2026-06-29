@@ -36,8 +36,12 @@ class Harness {
 
   async sendMessage(input: string) {
     this.transcript.push(userMessage(input));
-    
+    const startTime = Date.now();
+    let turn = 0;
+
     while (true) {
+      turn++;
+      console.log(`[Harness] --- Turn ${turn} ---`);
   
       const result = await this.provider.chat(
         this.transcript,
@@ -45,29 +49,34 @@ class Harness {
       );
       
       if (!result) {
-        console.log("No response from AI");
+        console.log(`[Harness] No response from AI after turn ${turn}`);
         return;
       };
       
+      const summary = result.content
+        ? `"${result.content.slice(0, 60)}${result.content.length > 60 ? "..." : ""}"`
+        : "(no content)";
+      console.log(`[Harness] Response: ${summary}  |  finishReason: ${result.finishReason}  |  tool_calls: ${result.tool_call?.length ?? 0}`);
+
       if (this.onEvent) {
-        console.log("onEventCalled");
         this.onEvent(JSON.stringify(result));
       }
-      console.log("[Harness Response]: ", result.content, result.tool_call);
       
       this.transcript.push(returnedAssistantMessage(result.content, result.tool_call));
       
       if (result.finishReason == "stop") {
         return result.content || "";
       }
+      
       if (result.finishReason == "tool_calls") {
-        console.log(`[Harness]: Implementing Tool Calls`);
+        console.log(`[Harness] Executing ${result.tool_call?.length ?? 0} tool call(s) in parallel...`);
         const toolResults = await Promise.all(
           (result.tool_call ?? []).map(async (tool) => {
+            
             const match = this.toolImplementation.find(
               (t) => t?.name === tool.function.name,
             );
-
+            
             if (!match?.implementation) {
               return {
                 role: "tool" as const,
@@ -75,11 +84,14 @@ class Harness {
                 tool_call_id: tool.id,
               };
             }
-
+            
+            console.log(`+++++++++++++++++++`);
+            console.log('Executing Tool : ', tool.function.name);
+            
             try {
               const toolOutput = await match.implementation(
                 JSON.parse(tool.function.arguments),
-                { emit : this.onEvent }
+                { emit : this.onEvent, workspaceRoot : "/home/user/react-app" }
               );
               return {
                 role: "tool" as const,
@@ -97,6 +109,8 @@ class Harness {
         );
 
         this.transcript.push(...toolResults);
+        console.log(`[Harness AFTER PARALLEL EXECUTION RESPONDED WITH : ] `, toolResults);
+        console.log(`+++++++++++++++++++++++++++++++++`);
       }
     }
   }

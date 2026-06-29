@@ -3,14 +3,19 @@ import {Harness} from "../harness/harness";
 import type { ToolImplementation } from "../harness/harness.types";
 import { SUB_AGENT_SYSTEM_PROMPT } from "../prompt/subAgentPrompt";
 import OpenAIProvider from "../providers/openai";
-import { subAgentToolsImplementation } from "./subAgentToolImplementation";
+import { readCommand, subAgentToolsImplementation } from "./subAgentToolImplementation";
 import { subAgentToolDefinition } from "./toolDefinition";
 import { TODO_AGENT_SYSTEM_PROMPT } from "../prompt/todoAgentSystemPrompt";
 import { waitForResponse } from "../../utils/pendingResponse";
+import type Sandbox from "e2b";
+import { getSandbox } from "../../utils/e2b";
 
 
-const spwaningSubAgent = async (args: unknown, options?: {
-    emit?: (event : any) => void;
+const spwaningSubAgent = async (
+  args: unknown,
+  options?: {
+    emit?: (event: any) => void;
+    workspaceRoot? : string
   }
 ) => {
   console.log(`[Spawning Sub Agent] : args are : `, args);
@@ -20,7 +25,7 @@ const spwaningSubAgent = async (args: unknown, options?: {
       description : string,
     }
     const provider = new OpenAIProvider(1, "gpt-4.1-mini");
-    const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT, options?.emit);
+    const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT.concat(`WORKSPACE_ROOT = ${options?.emit}`), options?.emit);
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
   } catch (error: any) {
@@ -60,7 +65,8 @@ const create_todo = async (args: unknown) => {
 }
 
 const askQuestions = async (args: unknown, options?: {
-    emit?: (event : any) => void;
+  emit?: (event: any) => void;
+  workspaceRoot? : string
   }) => {
   try {
     const { question } = args as {
@@ -84,6 +90,18 @@ const askQuestions = async (args: unknown, options?: {
   }
 };
 
+const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
+
+export const getFiles = async (args: unknown) => {
+    const sandbox = await getSandbox();
+    let all = await sandbox.files.list("/home/user/react-app", {depth: 99});
+    const filtered_files = all.filter(f => {
+        return !f.path.replace('/home/user/react-app','').split('/').some(p => IGNORE.includes(p));
+    })
+    return JSON.stringify(filtered_files);
+}
+
+
 const mainAgentTools: ToolImplementation[] = [
   {
     name: "sub_agent",
@@ -96,6 +114,14 @@ const mainAgentTools: ToolImplementation[] = [
   {
     name: "ask_questions",
     implementation : askQuestions
+  },
+  {
+    name: "get_files",
+    implementation : getFiles
+  },
+  {
+    name: "read_file",
+    implementation : readCommand
   }
 ];
 export {

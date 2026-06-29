@@ -49,8 +49,8 @@ class OpenAIProvider implements ModelProvider {
       try {
         return await this.chat_once(message, tools);
       } catch (error) {
-        console.log("Error in implementing the chat, attempt : ", i + 1);
-        console.error(error);
+        console.log('OPEN AI ERROR :', error);
+        if (error instanceof Error) console.error(`[OpenAI]  └─ ${error.message}`);
       }
     }
   }

@@ -1,5 +1,5 @@
 import type { Message, ToolCall } from "./harness/harness.types";
-import fs from "fs/promises";
+import path from "path";
 
 const userMessage = (input: string): Message => {
   return {
@@ -27,4 +27,12 @@ const returnedAssistantMessage = (
 };
 
 
-export { userMessage, assistantMessage, returnedAssistantMessage };
+const getAbsolutePath = (workspaceRoot: string, paths: string)=> {
+  if (paths.startsWith("/")) {
+    return paths
+  }
+  const absolutePath = path.join(workspaceRoot, paths);
+  return absolutePath;
+}
+
+export { userMessage, assistantMessage, returnedAssistantMessage, getAbsolutePath };

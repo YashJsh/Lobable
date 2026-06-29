@@ -1,7 +1,20 @@
-import { Sandbox } from 'e2b'
+import { Sandbox } from "e2b";
 
-const sandbox = await Sandbox.create(
-  'react-app'
-);
+let sandbox: Sandbox | null = null;
+let sandboxId: string | null = null;
 
-export { sandbox };
+export async function getSandbox() {
+  if (sandbox) {
+    return sandbox;
+  }
+  if (sandboxId) {
+    sandbox = await Sandbox.connect(sandboxId);
+    console.log("++++++SANDBOX___URL+++++++", sandbox.getHost(3000));
+  } else {
+    sandbox = await Sandbox.create("react-app");
+    sandboxId = sandbox.sandboxId;
+    console.log("++++++SANDBOX___URL+++++++", sandbox.getHost(3000));
+  }
+
+  return sandbox;
+}

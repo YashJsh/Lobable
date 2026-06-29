@@ -59,6 +59,40 @@ const toolsDefinition: ToolDefiniton[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "read_file",
+      description: "This tool reads the content of a file.",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "The path to the file to read",
+          },
+        },
+        required: ["path"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_files",
+      description: "This tool gives the list of files exists in the project",
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "The path to the file to read",
+          },
+        },
+        required: ["path"],
+      },
+    },
+  },
 ];
 
 const subAgentToolDefinition: ToolDefiniton[] = [

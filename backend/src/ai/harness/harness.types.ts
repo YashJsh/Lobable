@@ -48,9 +48,10 @@ interface ToolCall{
 
 interface ToolImplementation{
   name: string,
-  implementation: (args: unknown, options: {
-    emit? : (event : any)=>void
-  }) => Promise<any>,
+  implementation: (args: unknown, options?: {
+    emit?: (event: any) => void,
+    workspaceRoot? : string
+  }) => Promise<string>,
 }
 
 

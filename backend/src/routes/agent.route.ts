@@ -11,13 +11,19 @@ import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 const router = Router();
 
 export const clientMap = new Map<string, Response>();
+const sandboxMap = new Map<string, string>();
 
 router.post("/create", async (req: Request, res: Response) => {
-  console.log("Reached");
+  const promptPreview = req.body?.prompt?.slice(0, 40) ?? "";
+  console.log(`[Route] POST /create | prompt: "${promptPreview}${promptPreview.length >= 40 ? "..." : ""}"`);
+
   const body = req.body;
+
   if (!body.prompt) {
     return res.status(400).send("prompt is required");
   }
+  const roomID = body.roomId;
+  
   
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -39,12 +45,14 @@ router.post("/create", async (req: Request, res: Response) => {
   
   
   const response = await harness.sendMessage(body.prompt);
+  console.log(`[Route] POST /create | complete`);
   res.write(`data: ${response}\n\n`);
   res.end();
 });
 
 router.post("/answer", async (req: Request, res: Response) => {
   const { correlationId, answer } = req.body;
+  console.log(`[Route] POST /answer | correlationId: ${correlationId?.slice(0, 8)}... | answer: "${String(answer ?? "").slice(0, 40)}${String(answer ?? "").length > 40 ? "..." : ""}"`);
   if (!correlationId || !answer) {
     return res.status(403).json({
       success: false,
