@@ -72,5 +72,5 @@ export type {
   ToolCall,
   ModelProvider,
   ToolImplementation,
-  ReturnedResponse
+  ReturnedResponse,
 }

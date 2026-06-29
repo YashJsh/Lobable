@@ -1,26 +1,35 @@
-import { exec } from "child_process";
-import fs from "fs/promises";
+// import { exec } from "child_process";
+// import fs from "fs/promises";
 import type { ToolImplementation } from "../harness/harness.types";
+import { sandbox } from "../../utils/e2b";
 
 const bashToolImplementation = async (args: unknown) => {
   console.log("[subAgent] : [Bash command Tool]")
   const { command } = args as {
     command: string
   };
-  return new Promise<string>((resolve) => {
-    exec(command, (error, stdout, stderr) => {
-      resolve(
-        JSON.stringify({
-          command,
-          success: !error,
-          exitCode: error?.code ?? 0,
-          stdout,
-          stderr,
-          error: error?.message ?? null,
-        }),
-      );
-    });
-  });
+  try {
+    const response = await sandbox.commands.run(command);
+    return JSON.stringify(response);
+  }
+  catch (error : any) {
+    console.log("Error is : ", error);
+    return `error in bash tool: ${error?.message ?? "unknown error"}`;
+  }
+  // return new Promise<string>((resolve) => {
+  //   exec(command, (error, stdout, stderr) => {
+  //     resolve(
+  //       JSON.stringify({
+  //         command,
+  //         success: !error,
+  //         exitCode: error?.code ?? 0,
+  //         stdout,
+  //         stderr,
+  //         error: error?.message ?? null,
+  //       }),
+  //     );
+  //   });
+  // });
 };
 
 const writeCommand = async (args: unknown) => {
@@ -30,18 +39,26 @@ const writeCommand = async (args: unknown) => {
     content: string
   };
   try {
-    await fs.writeFile(path, content);
+    await sandbox.files.write(path, content);
+    // await fs.writeFile(path, content);
     return "success";
   } catch (error: any) {
+    console.log("Error is : ", error);
     return `error: ${error?.message ?? "unknown error"}`;
   }
 };
 
 const readCommand = async (args: unknown) => {
   console.log("[subAgent] : [Read command Tool]")
-  const { path } = args as { path : string} 
-  const result = await fs.readFile(path, "utf-8");
-  return result;
+  const { path } = args as { path: string } 
+  try {
+    const result = await sandbox.files.read(path);
+    // const result = await fs.readFile(path, "utf-8");
+    return result;
+  } catch (error : any) {
+    console.log("Error is : ", error);
+    return `error: ${error?.message ?? "unknown error"}`;
+  }
 };
 
 const editCommand = async (args: unknown) => {
@@ -51,12 +68,14 @@ const editCommand = async (args: unknown) => {
     old_str: string,
     new_str: string
   };
-  let read = await fs.readFile(path, "utf-8");
+  let read = await sandbox.files.read(path);
+  //let read = await fs.readFile(path, "utf-8");
   let old_str_new = old_str.trim();
   let m = (read.match(new RegExp(old_str_new, "g"))|| []).length;
   if (m == 1) {
-    read = read.replace(old_str, new_str);
-    fs.writeFile(path, read);
+    read = read.replace(old_str_new, new_str);
+    await sandbox.files.write(path, read);
+    //fs.writeFile(path, read);
     console.log("replaced");
     return "Replaced data successfully";
   } else if (m == 0) {

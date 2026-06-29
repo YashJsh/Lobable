@@ -1,4 +1,5 @@
 import type { Message, ToolCall } from "./harness/harness.types";
+import fs from "fs/promises";
 
 const userMessage = (input: string): Message => {
   return {
@@ -24,5 +25,6 @@ const returnedAssistantMessage = (
     tool_calls,
   };
 };
+
 
 export { userMessage, assistantMessage, returnedAssistantMessage };

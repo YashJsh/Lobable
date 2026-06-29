@@ -4,14 +4,15 @@ import type {
   ToolDefiniton,
   ToolImplementation,
 } from "./harness.types";
-import { assistantMessage, returnedAssistantMessage, userMessage } from "../utils";
+import { returnedAssistantMessage, userMessage } from "../utils";
 
 class Harness {
   private provider: ModelProvider;
   private transcript: Message[];
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
-  private onEvent?: (event : string) => void;
+  private onEvent?: (event: string) => void;
+  private tokens;
 
   constructor(
     provider: ModelProvider,
@@ -30,25 +31,32 @@ class Harness {
     ];
     this.toolImplementation = toolImplementation;
     this.onEvent = onEvent;
+    this.tokens = 0;
   }
 
   async sendMessage(input: string) {
     this.transcript.push(userMessage(input));
+    
     while (true) {
+  
       const result = await this.provider.chat(
         this.transcript,
         this.toolDefinition,
       );
+      
       if (!result) {
         console.log("No response from AI");
         return;
-      }
+      };
+      
       if (this.onEvent) {
         console.log("onEventCalled");
         this.onEvent(JSON.stringify(result));
       }
-      console.log("[Harness Response]: ", result);
+      console.log("[Harness Response]: ", result.content, result.tool_call);
+      
       this.transcript.push(returnedAssistantMessage(result.content, result.tool_call));
+      
       if (result.finishReason == "stop") {
         return result.content || "";
       }
