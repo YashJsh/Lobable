@@ -6,7 +6,7 @@ import { ArrowLeft, RefreshCw, ExternalLink, Monitor, Tablet, Smartphone, Copy, 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getSandboxUrl, submitAnswer, streamAgentCreate, AgentResponse } from "@/api/client";
+import { getSandboxUrl, submitAnswer, streamAgentCreate, streamAgentUpdate, AgentResponse } from "@/api/client";
 
 interface MessageItem {
   id: string;
@@ -35,12 +35,126 @@ function BuildContent() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [previewSize, setPreviewSize] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submittingAnswerId, setSubmittingAnswerId] = useState<string | null>(null);
 
+  const [updatePrompt, setUpdatePrompt] = useState("");
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const buildStarted = useRef(false);
+  const sandboxUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    sandboxUrlRef.current = sandboxUrl;
+  }, [sandboxUrl]);
+
+  const reloadIframe = () => {
+    const frame = document.getElementById("preview-frame") as HTMLIFrameElement;
+    const currentUrl = sandboxUrlRef.current;
+    if (frame && currentUrl) {
+      try {
+        const url = new URL(currentUrl);
+        url.searchParams.set("t", Date.now().toString());
+        frame.src = url.toString();
+      } catch {
+        frame.src = currentUrl;
+      }
+    }
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updatePrompt.trim() || !roomId) return;
+
+    const currentPrompt = updatePrompt.trim();
+    setUpdatePrompt("");
+    setStatus("running");
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        role: "user",
+        content: currentPrompt,
+        timestamp: new Date(),
+      },
+      {
+        id: Math.random().toString(),
+        role: "status",
+        content: "Sending update instructions to agent...",
+        timestamp: new Date(),
+      }
+    ]);
+
+    await streamAgentUpdate(
+      currentPrompt,
+      roomId,
+      (msg) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: msg.role,
+            content: msg.content || undefined,
+            toolCalls: msg.tool_call?.map((tc) => {
+              let parsedArgs = {};
+              try {
+                parsedArgs = JSON.parse(tc.function.arguments || "{}");
+              } catch {
+                parsedArgs = { raw: tc.function.arguments };
+              }
+              return {
+                id: tc.id,
+                name: tc.function.name,
+                arguments: parsedArgs,
+              };
+            }),
+            timestamp: new Date(),
+          },
+        ]);
+        setStatus((current) => (current === "waiting" ? "waiting" : "running"));
+      },
+      (q) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: q.correlationId,
+            role: "assistant",
+            content: undefined,
+            question: q.question,
+            correlationId: q.correlationId,
+            timestamp: new Date(),
+          },
+        ]);
+        setStatus("waiting");
+      },
+      () => {
+        setStatus("completed");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: "status",
+            content: "Update successfully applied.",
+            timestamp: new Date(),
+          },
+        ]);
+        reloadIframe();
+      },
+      (err) => {
+        setStatus("error");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            role: "status",
+            content: `Error during update: ${err.message || "Failed to communicate with agent."}`,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    );
+  };
 
   // Poll for the sandbox URL
   useEffect(() => {
@@ -168,6 +282,7 @@ function BuildContent() {
             timestamp: new Date(),
           },
         ]);
+        reloadIframe();
       },
       (err) => {
         // Handle stream error
@@ -226,8 +341,7 @@ function BuildContent() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black text-zinc-100 font-sans selection:bg-white selection:text-black">
-      {/* LEFT 1/3 Panel - Chat and Orchestrator Logs */}
-      <div className="flex flex-col w-1/3 border-r border-white/10 bg-[#050505] min-w-[350px] max-w-[550px] relative z-10">
+      <div className="flex flex-col w-1/3 h-full border-r border-white/10 bg-[#050505] min-w-[350px] max-w-[550px] relative z-10">
         
         {/* Sidebar Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-[#080808]">
@@ -262,7 +376,7 @@ function BuildContent() {
         </div>
 
         {/* Scrollable logs area */}
-        <ScrollArea ref={scrollRef} className="flex-1 p-4 h-[calc(100vh-120px)]">
+        <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
           <div className="space-y-6 pb-8">
             {messages.map((msg, index) => {
               if (msg.role === "status") {
@@ -343,6 +457,43 @@ function BuildContent() {
             })}
           </div>
         </ScrollArea>
+
+        {/* Chat update input */}
+        <form onSubmit={handleUpdateSubmit} className="p-3 border-t border-white/10 bg-[#080808]">
+          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black p-1.5 focus-within:border-white/20 transition-colors">
+            <Textarea
+              placeholder={
+                status === "running" ? "Agent is running..." :
+                status === "waiting" ? "Reply to the question above..." :
+                "Ask to make changes (e.g., make it dark mode)..."
+              }
+              value={updatePrompt}
+              onChange={(e) => setUpdatePrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleUpdateSubmit(e);
+                }
+              }}
+              disabled={status === "running" || status === "waiting"}
+              className="w-full min-h-[50px] max-h-[120px] resize-none bg-transparent border-0 text-zinc-200 placeholder-zinc-700 focus-visible:ring-0 focus-visible:ring-offset-0 text-xs p-2 focus:outline-none disabled:opacity-50"
+            />
+            <div className="flex items-center justify-between px-2 pt-1 border-t border-white/5 mt-1">
+              <span className="text-[10px] text-zinc-600 font-mono">
+                Press Enter to send
+              </span>
+              <Button
+                type="submit"
+                disabled={status === "running" || status === "waiting" || !updatePrompt.trim()}
+                size="icon"
+                variant="ghost"
+                className="size-6 rounded-md bg-white text-black hover:bg-zinc-200 hover:text-black disabled:bg-zinc-900 disabled:text-zinc-600 transition-all duration-200"
+              >
+                <Send className="size-3" />
+              </Button>
+            </div>
+          </div>
+        </form>
         
         {/* Sidebar Status Footer */}
         <div className="border-t border-white/10 px-4 py-3 bg-[#080808] flex items-center justify-between text-xs font-mono text-zinc-500">
@@ -362,34 +513,6 @@ function BuildContent() {
         {/* Mock Browser Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-[#050505]">
           <div className="flex items-center gap-4 flex-1">
-            {/* Device Toggles */}
-            <div className="flex items-center border border-white/10 rounded-lg p-0.5 bg-black/40">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`size-7 rounded-md ${previewSize === "desktop" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-200"}`}
-                onClick={() => setPreviewSize("desktop")}
-              >
-                <Monitor className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`size-7 rounded-md ${previewSize === "tablet" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-200"}`}
-                onClick={() => setPreviewSize("tablet")}
-              >
-                <Tablet className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`size-7 rounded-md ${previewSize === "mobile" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-200"}`}
-                onClick={() => setPreviewSize("mobile")}
-              >
-                <Smartphone className="size-3.5" />
-              </Button>
-            </div>
-
             {/* URL Address Bar */}
             <div className="flex-1 max-w-xl flex items-center border border-white/10 rounded-lg bg-black px-3 py-1 text-xs text-zinc-400 font-mono select-none">
               <span className="text-zinc-700 mr-1 select-none">preview:</span>
@@ -436,13 +559,7 @@ function BuildContent() {
 
         {/* Viewport content */}
         <div className="flex-1 bg-black flex items-center justify-center p-4">
-          <div
-            className={`h-full border border-white/10 rounded-xl overflow-hidden bg-zinc-950 transition-all duration-300 flex flex-col shadow-2xl ${
-              previewSize === "desktop" ? "w-full" :
-              previewSize === "tablet" ? "max-w-md w-full" :
-              "max-w-xs w-full"
-            }`}
-          >
+          <div className="h-full w-full border border-white/10 rounded-xl overflow-hidden bg-zinc-950 flex flex-col shadow-2xl">
             {sandboxUrl ? (
               <iframe
                 id="preview-frame"

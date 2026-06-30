@@ -12,19 +12,21 @@ import { getSandbox } from "../utils/e2b";
 const router = Router();
 
 export const clientMap = new Map<string, Response>();
-const sandboxMap = new Map<string, string>();
+export const harnessMap = new Map<string, Harness>();
 
 router.post("/create", async (req: Request, res: Response) => {
-  const promptPreview = req.body?.prompt?.slice(0, 40) ?? "";
   const body = req.body;
-
   if (!body.prompt) {
     return res.status(400).send("prompt is required");
   }
 
+  const projectId = body.projectId || body.roomId || crypto.randomUUID().toString();
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+
+  clientMap.set(projectId, res);
 
   const provider = new OpenAIProvider(1, "gpt-4.1-mini");
   const harness = new Harness(
@@ -33,18 +35,43 @@ router.post("/create", async (req: Request, res: Response) => {
     mainAgentTools,
     MAIN_AGENT_SYSTEM_PROMPT,
     (event) => {
-      res.write(`data: ${event}\n\n`);
+      const client = clientMap.get(projectId);
+      if (client) {
+        client.write(`data: ${event}\n\n`);
+      }
     }
   );
 
-  const projectId = crypto.randomUUID().toString();
-  clientMap.set(projectId, res);
+  harnessMap.set(projectId, harness);
   
-  
-  const response = await harness.sendMessage(body.prompt);
+  await harness.sendMessage(body.prompt);
   console.log(`[Route] POST /create | complete`);
   res.end();
 });
+
+router.post("/update", async (req: Request, res: Response) => {
+  const body = req.body;
+  const projectId = body.projectId || body.roomId;
+  if (!projectId || !body.prompt) {
+    return res.status(400).send("projectId and prompt are required");
+  }
+
+  const harness = harnessMap.get(projectId);
+  if (!harness) {
+    return res.status(404).send("Harness instance not found for this project");
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  clientMap.set(projectId, res);
+
+  await harness.sendMessage(body.prompt);
+  console.log(`[Route] POST /update | complete`);
+  res.end();
+});
+
 
 router.post("/answer", async (req: Request, res: Response) => {
   const { correlationId, answer } = req.body;

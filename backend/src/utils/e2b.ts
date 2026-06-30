@@ -9,11 +9,15 @@ export async function getSandbox() {
   }
   if (sandboxId) {
     sandbox = await Sandbox.connect(sandboxId);
-    console.log("++++++SANDBOX___URL+++++++", sandbox.getHost(3000));
+   
   } else {
-    sandbox = await Sandbox.create("react-app");
+    sandbox = await Sandbox.create("react-app", {
+      lifecycle : {
+        onTimeout : "pause"
+      }
+    });
     sandboxId = sandbox.sandboxId;
-    console.log("++++++SANDBOX___URL+++++++", sandbox.getHost(3000));
+   
   }
 
   return sandbox;

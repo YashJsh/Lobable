@@ -131,3 +131,99 @@ export const streamAgentCreate = async (
     onError(error);
   }
 };
+
+/**
+ * Connect to the agent update SSE stream and handle incoming chunks.
+ * Uses standard Fetch API to support readable streams in browser environments.
+ */
+export const streamAgentUpdate = async (
+  prompt: string,
+  roomId: string,
+  onMessage: (msg: AgentResponse) => void,
+  onQuestion: (q: { correlationId: string; question: string }) => void,
+  onClose: () => void,
+  onError: (err: any) => void
+) => {
+  try {
+    const response = await fetch("/api/agent/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt, roomId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No readable stream in response");
+    }
+
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+
+        const lines = trimmed.split("\n");
+        let dataStr = "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const content = line.slice(6).trim();
+            if (dataStr) {
+              dataStr += "\n" + content;
+            } else {
+              dataStr = content;
+            }
+          }
+        }
+
+        if (trimmed.includes("event: connected")) {
+          const jsonMatch = trimmed.match(/{[\s\S]*}/);
+          if (jsonMatch) {
+            try {
+              const questionObj = JSON.parse(jsonMatch[0]);
+              if (questionObj.correlationId && questionObj.question) {
+                onQuestion(questionObj);
+                continue;
+              }
+            } catch (e) {
+              console.error("Failed to parse question JSON from chunk:", e);
+            }
+          }
+        }
+
+        if (dataStr) {
+          try {
+            if (dataStr.startsWith("event: connected\n")) {
+              dataStr = dataStr.slice("event: connected\n".length);
+            }
+            const parsed = JSON.parse(dataStr);
+            onMessage(parsed);
+          } catch (e) {
+            onMessage({ role: "assistant", content: dataStr });
+          }
+        }
+      }
+    }
+    onClose();
+  } catch (error) {
+    onError(error);
+  }
+};
+
