@@ -417,8 +417,8 @@ function BuildContent() {
                         <div className="w-full border border-white/20 bg-zinc-950 p-4 rounded-xl space-y-3 shadow-lg">
                           <p className="text-sm font-medium text-white">{msg.question}</p>
                           
-                          {msg.options && msg.options.length > 0 ? (
-                            <div className="flex flex-col gap-2 pt-1">
+                          {msg.options && msg.options.length > 0 && (
+                            <div className="flex flex-col gap-2 pt-1 pb-1">
                               {msg.options.map((opt) => (
                                 <Button
                                   key={opt}
@@ -444,37 +444,38 @@ function BuildContent() {
                                       setSubmittingAnswerId(null);
                                     }
                                   }}
-                                  className="w-full justify-start text-xs border-white/10 hover:bg-white hover:text-black transition-all bg-black text-zinc-300 font-sans h-8"
+                                  className="w-full justify-start text-xs border-white/10 hover:bg-white hover:text-black transition-all bg-black text-zinc-300 font-sans h-auto py-2.5 px-3.5 whitespace-normal text-left"
                                 >
                                   {opt}
                                 </Button>
                               ))}
-                            </div>
-                          ) : (
-                            <div className="relative">
-                              <Textarea
-                                placeholder="Type your reply..."
-                                value={answers[msg.correlationId!] || ""}
-                                onChange={(e) => setAnswers(prev => ({ ...prev, [msg.correlationId!]: e.target.value }))}
-                                className="bg-black border border-white/10 text-zinc-200 placeholder-zinc-700 min-h-[70px] max-h-[150px] focus-visible:ring-0 focus-visible:border-white/30 text-xs rounded-lg"
-                              />
-                              <div className="flex justify-end mt-2">
-                                <Button
-                                  size="sm"
-                                  disabled={submittingAnswerId === msg.correlationId || !answers[msg.correlationId!]?.trim()}
-                                  onClick={() => handleAnswerSubmit(msg.correlationId!)}
-                                  className="h-7 bg-white text-black hover:bg-zinc-200 text-xs gap-1 font-mono rounded-md"
-                                >
-                                  {submittingAnswerId === msg.correlationId ? (
-                                    <Loader2 className="size-3 animate-spin" />
-                                  ) : (
-                                    <Send className="size-3" />
-                                  )}
-                                  Submit
-                                </Button>
-                              </div>
+                              <div className="text-[10px] text-zinc-600 font-mono text-center my-1.5">OR</div>
                             </div>
                           )}
+
+                          <div className="relative">
+                            <Textarea
+                              placeholder="Type a custom reply..."
+                              value={answers[msg.correlationId!] || ""}
+                              onChange={(e) => setAnswers(prev => ({ ...prev, [msg.correlationId!]: e.target.value }))}
+                              className="bg-black border border-white/10 text-zinc-200 placeholder-zinc-700 min-h-[70px] max-h-[150px] focus-visible:ring-0 focus-visible:border-white/30 text-xs rounded-lg"
+                            />
+                            <div className="flex justify-end mt-2">
+                              <Button
+                                size="sm"
+                                disabled={submittingAnswerId === msg.correlationId || !answers[msg.correlationId!]?.trim()}
+                                onClick={() => handleAnswerSubmit(msg.correlationId!)}
+                                className="h-7 bg-white text-black hover:bg-zinc-200 text-xs gap-1 font-mono rounded-md"
+                              >
+                                {submittingAnswerId === msg.correlationId ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : (
+                                  <Send className="size-3" />
+                                )}
+                                Submit
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       )}
 
