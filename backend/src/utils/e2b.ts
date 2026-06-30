@@ -13,7 +13,8 @@ export async function getSandbox() {
   } else {
     sandbox = await Sandbox.create("react-app", {
       lifecycle : {
-        onTimeout : "pause"
+        onTimeout : "pause",
+        autoResume : true
       }
     });
     sandboxId = sandbox.sandboxId;
