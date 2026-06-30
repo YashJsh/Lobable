@@ -36,8 +36,15 @@ const toolsDefinition: ToolDefiniton[] = [
             type: "string",
             description: "The question we want to ask the user",
           },
+          suggestions: {
+            type: "array",
+            items: {
+              type: "string"
+            },
+            description: "A list of options for the user to choose from if it is a multiple-choice question."
+          }
         },
-        required: ["question"],
+        required: ["question", "suggestions"],
       },
     },
   },

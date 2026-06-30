@@ -69,9 +69,12 @@ const askQuestions = async (args: unknown, options?: {
   workspaceRoot? : string
   }) => {
   try {
-    const { question } = args as {
-      question : string
+    console.log("[askQuestions] Invoked with arguments:", JSON.stringify(args, null, 2));
+    const { question, suggestions: questionOptions } = args as {
+      question : string;
+      suggestions : string[];
     }
+    console.log("Tool question : ", question, "tool Options ", questionOptions);
     const correlationId = crypto.randomUUID();
     if (options?.emit) {
       options.emit(
@@ -79,6 +82,7 @@ const askQuestions = async (args: unknown, options?: {
           `data: ${JSON.stringify({
             correlationId,
             question,
+            suggestions: questionOptions,
           })}\n\n`,
       )
     }

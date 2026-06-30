@@ -39,7 +39,7 @@ export const streamAgentCreate = async (
   prompt: string,
   roomId: string,
   onMessage: (msg: AgentResponse) => void,
-  onQuestion: (q: { correlationId: string; question: string }) => void,
+  onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
   onClose: () => void,
   onError: (err: any) => void
 ) => {
@@ -101,7 +101,11 @@ export const streamAgentCreate = async (
             try {
               const questionObj = JSON.parse(jsonMatch[0]);
               if (questionObj.correlationId && questionObj.question) {
-                onQuestion(questionObj);
+                onQuestion({
+                  correlationId: questionObj.correlationId,
+                  question: questionObj.question,
+                  options: questionObj.suggestions || questionObj.options,
+                });
                 continue;
               }
             } catch (e) {
@@ -140,7 +144,7 @@ export const streamAgentUpdate = async (
   prompt: string,
   roomId: string,
   onMessage: (msg: AgentResponse) => void,
-  onQuestion: (q: { correlationId: string; question: string }) => void,
+  onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
   onClose: () => void,
   onError: (err: any) => void
 ) => {
@@ -199,7 +203,11 @@ export const streamAgentUpdate = async (
             try {
               const questionObj = JSON.parse(jsonMatch[0]);
               if (questionObj.correlationId && questionObj.question) {
-                onQuestion(questionObj);
+                onQuestion({
+                  correlationId: questionObj.correlationId,
+                  question: questionObj.question,
+                  options: questionObj.suggestions || questionObj.options,
+                });
                 continue;
               }
             } catch (e) {

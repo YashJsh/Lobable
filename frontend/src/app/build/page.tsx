@@ -21,6 +21,7 @@ interface MessageItem {
   question?: string;
   correlationId?: string;
   answerSubmitted?: boolean;
+  options?: string[];
 }
 
 type BuildStatus = "idle" | "running" | "waiting" | "completed" | "error";
@@ -123,6 +124,7 @@ function BuildContent() {
             content: undefined,
             question: q.question,
             correlationId: q.correlationId,
+            options: q.options,
             timestamp: new Date(),
           },
         ]);
@@ -265,6 +267,7 @@ function BuildContent() {
             content: undefined,
             question: q.question,
             correlationId: q.correlationId,
+            options: q.options,
             timestamp: new Date(),
           },
         ]);
@@ -413,29 +416,65 @@ function BuildContent() {
                       {msg.question && !msg.answerSubmitted && (
                         <div className="w-full border border-white/20 bg-zinc-950 p-4 rounded-xl space-y-3 shadow-lg">
                           <p className="text-sm font-medium text-white">{msg.question}</p>
-                          <div className="relative">
-                            <Textarea
-                              placeholder="Type your reply..."
-                              value={answers[msg.correlationId!] || ""}
-                              onChange={(e) => setAnswers(prev => ({ ...prev, [msg.correlationId!]: e.target.value }))}
-                              className="bg-black border border-white/10 text-zinc-200 placeholder-zinc-700 min-h-[70px] max-h-[150px] focus-visible:ring-0 focus-visible:border-white/30 text-xs rounded-lg"
-                            />
-                            <div className="flex justify-end mt-2">
-                              <Button
-                                size="sm"
-                                disabled={submittingAnswerId === msg.correlationId || !answers[msg.correlationId!]?.trim()}
-                                onClick={() => handleAnswerSubmit(msg.correlationId!)}
-                                className="h-7 bg-white text-black hover:bg-zinc-200 text-xs gap-1 font-mono rounded-md"
-                              >
-                                {submittingAnswerId === msg.correlationId ? (
-                                  <Loader2 className="size-3 animate-spin" />
-                                ) : (
-                                  <Send className="size-3" />
-                                )}
-                                Submit
-                              </Button>
+                          
+                          {msg.options && msg.options.length > 0 ? (
+                            <div className="flex flex-col gap-2 pt-1">
+                              {msg.options.map((opt) => (
+                                <Button
+                                  key={opt}
+                                  variant="outline"
+                                  disabled={submittingAnswerId === msg.correlationId}
+                                  onClick={async () => {
+                                    setAnswers(prev => ({ ...prev, [msg.correlationId!]: opt }));
+                                    setSubmittingAnswerId(msg.correlationId!);
+                                    try {
+                                      await submitAnswer(msg.correlationId!, opt);
+                                      setMessages((prev) =>
+                                        prev.map((m) =>
+                                          m.correlationId === msg.correlationId
+                                            ? { ...m, answerSubmitted: true, content: `Answer submitted: "${opt}"` }
+                                            : m
+                                        )
+                                      );
+                                      setStatus("running");
+                                    } catch (error) {
+                                      console.error("Failed to submit answer:", error);
+                                      alert("Failed to submit answer. Please try again.");
+                                    } finally {
+                                      setSubmittingAnswerId(null);
+                                    }
+                                  }}
+                                  className="w-full justify-start text-xs border-white/10 hover:bg-white hover:text-black transition-all bg-black text-zinc-300 font-sans h-8"
+                                >
+                                  {opt}
+                                </Button>
+                              ))}
                             </div>
-                          </div>
+                          ) : (
+                            <div className="relative">
+                              <Textarea
+                                placeholder="Type your reply..."
+                                value={answers[msg.correlationId!] || ""}
+                                onChange={(e) => setAnswers(prev => ({ ...prev, [msg.correlationId!]: e.target.value }))}
+                                className="bg-black border border-white/10 text-zinc-200 placeholder-zinc-700 min-h-[70px] max-h-[150px] focus-visible:ring-0 focus-visible:border-white/30 text-xs rounded-lg"
+                              />
+                              <div className="flex justify-end mt-2">
+                                <Button
+                                  size="sm"
+                                  disabled={submittingAnswerId === msg.correlationId || !answers[msg.correlationId!]?.trim()}
+                                  onClick={() => handleAnswerSubmit(msg.correlationId!)}
+                                  className="h-7 bg-white text-black hover:bg-zinc-200 text-xs gap-1 font-mono rounded-md"
+                                >
+                                  {submittingAnswerId === msg.correlationId ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : (
+                                    <Send className="size-3" />
+                                  )}
+                                  Submit
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
