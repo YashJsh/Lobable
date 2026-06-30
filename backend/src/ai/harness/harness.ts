@@ -53,11 +53,6 @@ class Harness {
         return;
       };
       
-      const summary = result.content
-        ? `"${result.content.slice(0, 60)}${result.content.length > 60 ? "..." : ""}"`
-        : "(no content)";
-      console.log(`[Harness] Response: ${summary}  |  finishReason: ${result.finishReason}  |  tool_calls: ${result.tool_call?.length ?? 0}`);
-
       if (this.onEvent) {
         this.onEvent(JSON.stringify(result));
       }
@@ -69,6 +64,7 @@ class Harness {
       }
       
       if (result.finishReason == "tool_calls") {
+        console.log(`+++++++++++++++++++\n`);
         console.log(`[Harness] Executing ${result.tool_call?.length ?? 0} tool call(s) in parallel...`);
         const toolResults = await Promise.all(
           (result.tool_call ?? []).map(async (tool) => {
@@ -85,7 +81,7 @@ class Harness {
               };
             }
             
-            console.log(`+++++++++++++++++++`);
+            console.log(`+++++++++++++++++++\n`);
             console.log('Executing Tool : ', tool.function.name);
             
             try {
