@@ -14,14 +14,14 @@ export default function PromptPage() {
     e.preventDefault();
     if (!prompt.trim()) return;
 
-    // Generate a random room ID
-    const roomId = Math.random().toString(36).substring(2, 15);
+    // Generate a random project ID
+    const projectId = Math.random().toString(36).substring(2, 15);
     
-    // Redirect to build page with prompt and roomId
-    const params = new URLSearchParams();
-    params.set("prompt", prompt.trim());
-    params.set("roomId", roomId);
-    router.push(`/build?${params.toString()}`);
+    // Save prompt to sessionStorage to keep the URL clean
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(`prompt-${projectId}`, prompt.trim());
+    }
+    router.push(`/build/${projectId}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

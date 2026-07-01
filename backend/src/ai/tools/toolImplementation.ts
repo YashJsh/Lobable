@@ -77,8 +77,7 @@ const askQuestions = async (args: unknown, options?: {
     console.log("Tool question : ", question, "tool Options ", questionOptions);
     const correlationId = crypto.randomUUID();
     if (options?.emit) {
-      options.emit(
-        `event: connected\n` +
+      options.emit( 
           `data: ${JSON.stringify({
             correlationId,
             question,
@@ -94,7 +93,7 @@ const askQuestions = async (args: unknown, options?: {
   }
 };
 
-const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
+export const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
 
 export const getFiles = async (args: unknown) => {
     const sandbox = await getSandbox();

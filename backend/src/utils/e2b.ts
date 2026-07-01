@@ -9,16 +9,17 @@ export async function getSandbox() {
   }
   if (sandboxId) {
     sandbox = await Sandbox.connect(sandboxId);
-   
+
   } else {
     sandbox = await Sandbox.create("react-app", {
-      lifecycle : {
-        onTimeout : "pause",
-        autoResume : true
+      timeoutMs : 50000,
+      lifecycle: {
+        onTimeout: "pause",
+        autoResume: true
       }
     });
     sandboxId = sandbox.sandboxId;
-   
+
   }
 
   return sandbox;
