@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import {Harness} from "../harness/harness";
+import { Harness } from "../harness/harness";
 import type { ToolImplementation } from "../harness/harness.types";
 import { SUB_AGENT_SYSTEM_PROMPT } from "../prompt/subAgentPrompt";
 import OpenAIProvider from "../providers/openai";
@@ -15,14 +15,14 @@ const spwaningSubAgent = async (
   args: unknown,
   options?: {
     emit?: (event: any) => void;
-    workspaceRoot? : string
+    workspaceRoot?: string
   }
 ) => {
   console.log(`[Spawning Sub Agent] : args are : `, args);
   try {
-    const {task, description} = args as {
+    const { task, description } = args as {
       task: string,
-      description : string,
+      description: string,
     }
     const provider = new OpenAIProvider(1, "gpt-4.1-mini");
     const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT.concat(`WORKSPACE_ROOT = ${options?.emit}`), options?.emit);
@@ -33,25 +33,25 @@ const spwaningSubAgent = async (
   }
 };
 
-const create_todo = async (args: unknown) => {
+const create_task = async (args: unknown) => {
   try {
     const client = new OpenAI();
     const { prompt } = args as {
-      prompt : string
+      prompt: string
     }
     const messages: any = [{
       role: "system",
-      content : TODO_AGENT_SYSTEM_PROMPT
+      content: TODO_AGENT_SYSTEM_PROMPT
     }, {
       role: "user",
-      content : prompt
+      content: prompt
     }];
-    
+
     const response = await client.chat.completions.create({
       messages,
       model: "gpt-4.1-mini",
     })
-  
+
     const choices = response.choices[0];
     if (choices?.finish_reason == "stop") {
       const result = choices.message.content;
@@ -61,34 +61,34 @@ const create_todo = async (args: unknown) => {
   }
   catch (error: any) {
     return error as string
- }
+  }
 }
 
 const askQuestions = async (args: unknown, options?: {
   emit?: (event: any) => void;
-  workspaceRoot? : string
-  }) => {
+  workspaceRoot?: string
+}) => {
   try {
     console.log("[askQuestions] Invoked with arguments:", JSON.stringify(args, null, 2));
     const { question, suggestions: questionOptions } = args as {
-      question : string;
-      suggestions : string[];
+      question: string;
+      suggestions: string[];
     }
     console.log("Tool question : ", question, "tool Options ", questionOptions);
     const correlationId = crypto.randomUUID();
     if (options?.emit) {
-      options.emit( 
-          `data: ${JSON.stringify({
-            correlationId,
-            question,
-            suggestions: questionOptions,
-          })}\n\n`,
+      options.emit(
+        `data: ${JSON.stringify({
+          correlationId,
+          question,
+          suggestions: questionOptions,
+        })}\n\n`,
       )
     }
     const response = await waitForResponse(correlationId);
     console.log("Recieved response is : ", response);
     return response as string;
-  } catch(error : any) {
+  } catch (error: any) {
     return error as string
   }
 };
@@ -96,12 +96,12 @@ const askQuestions = async (args: unknown, options?: {
 export const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
 
 export const getFiles = async (args: unknown) => {
-    const sandbox = await getSandbox();
-    let all = await sandbox.files.list("/home/user/react-app", {depth: 99});
-    const filtered_files = all.filter(f => {
-        return !f.path.replace('/home/user/react-app','').split('/').some(p => IGNORE.includes(p));
-    })
-    return JSON.stringify(filtered_files);
+  const sandbox = await getSandbox();
+  let all = await sandbox.files.list("/home/user/next-app", { depth: 99 });
+  const filtered_files = all.filter(f => {
+    return !f.path.replace('/home/user/next-app', '').split('/').some(p => IGNORE.includes(p));
+  })
+  return JSON.stringify(filtered_files);
 }
 
 
@@ -111,20 +111,20 @@ const mainAgentTools: ToolImplementation[] = [
     implementation: spwaningSubAgent,
   },
   {
-    name: "create_todo",
-    implementation : create_todo
+    name: "create_task",
+    implementation: create_task
   },
   {
     name: "ask_questions",
-    implementation : askQuestions
+    implementation: askQuestions
   },
   {
     name: "get_files",
-    implementation : getFiles
+    implementation: getFiles
   },
   {
     name: "read_file",
-    implementation : readCommand
+    implementation: readCommand
   }
 ];
 export {

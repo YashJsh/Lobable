@@ -57,7 +57,7 @@ class OpenAIProvider implements ModelProvider {
 
   private async chat_once(message: Message[], tools: ToolDefiniton[]) {
     const response = await this.client.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4.1",
       messages: message as any,
       tools: tools as any,
     });

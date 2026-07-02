@@ -1,4 +1,4 @@
-import {type  ToolDefiniton } from "../harness/harness.types";
+import { type ToolDefiniton } from "../harness/harness.types";
 
 const toolsDefinition: ToolDefiniton[] = [
   {
@@ -16,7 +16,7 @@ const toolsDefinition: ToolDefiniton[] = [
           },
           description: {
             type: "string",
-            description : "The detailed description of the task to execute."
+            description: "The detailed description of the task to execute."
           }
         },
         required: ["task", "description"],
@@ -51,7 +51,7 @@ const toolsDefinition: ToolDefiniton[] = [
   {
     type: "function",
     function: {
-      name: "create_todo",
+      name: "create_task",
       description:
         "This creates a todo according to the query for planning.",
       parameters: {
@@ -103,7 +103,7 @@ const toolsDefinition: ToolDefiniton[] = [
 ];
 
 const subAgentToolDefinition: ToolDefiniton[] = [
-{
+  {
     type: "function",
     function: {
       name: "bash_tool",
@@ -158,31 +158,6 @@ const subAgentToolDefinition: ToolDefiniton[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "editTool",
-      description: "This tools edits a file",
-      parameters: {
-        type: "object",
-        properties: {
-          path: {
-            type: "string",
-            description : "This path of the file"
-          },
-          old_str: {
-            type: "string",
-            description : "Exact contents of the file to replace"
-          },
-          new_str: {
-            type: "string",
-            description : "New content of the file to replace with old ones."
-          }
-        },
-        required : ["path", "old_str", "new_str"]
-      }
-    }
-  }
 ]
 
 

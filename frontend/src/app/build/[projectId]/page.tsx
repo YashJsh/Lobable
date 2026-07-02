@@ -341,6 +341,7 @@ function BuildContent() {
       />
       <PreviewPanel
         sandboxUrl={sandboxUrl}
+        status={status}
         onReload={reloadIframe}
       />
     </div>

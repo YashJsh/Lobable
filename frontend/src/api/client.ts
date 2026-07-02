@@ -169,3 +169,15 @@ export const streamAgentUpdate = async (
   }
 };
 
+export const getAllFiles = async () => {
+  const response = await fetch("http://localhost:3001/agent/get_all_files");
+  return response.json();
+};
+
+export const getFileContent = async (path: string) => {
+  const response = await fetch(
+    `http://localhost:3001/agent/get_file?path=${encodeURIComponent(path)}`
+  );
+  return response.json();
+};
+

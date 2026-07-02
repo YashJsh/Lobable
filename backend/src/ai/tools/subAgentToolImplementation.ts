@@ -14,8 +14,9 @@ const bashToolImplementation = async (args: unknown) => {
     const response = await sandbox.commands.run(command);
     return JSON.stringify(response);
   } catch (error: any) {
-    console.log(`[subAgent] bash_tool | error: ${error?.message ?? "unknown error"}`);
-    return `error in bash tool: ${error?.message ?? "unknown error"}`;
+    console.log(`[subAgent] bash_tool | error`);
+    console.dir(error, { depth: null });
+    return JSON.stringify(error);
   }
 };
 
@@ -67,40 +68,6 @@ export const readCommand = async (
   }
 };
 
-const editCommand = async (
-  args: unknown,
-  options?: {
-    emit?: (event: any) => void;
-     workspaceRoot?: string;
-  },
-) => {
-  
-  const { path, old_str, new_str } = args as {
-    path: string;
-    old_str: string;
-    new_str: string;
-  };
-  
-  const absolutePath = getAbsolutePath(options?. workspaceRoot!, path);
-  let read = await sandbox.files.read(absolutePath);
-  let old_str_new = old_str.trim();
-  let m = (read.match(new RegExp(old_str_new, "g")) || []).length;
-  
-  console.log(`[subAgent] editTool`);
-  console.log(`ABSOLUTE PATH IS : `, absolutePath);
-  
-  if (m == 1) {
-    read = read.replace(old_str_new, new_str);
-    await sandbox.files.write(absolutePath, read);
-    return "Replaced data successfully";
-  } else if (m == 0) {
-    return "No data found";
-  } else {
-    return "Argument is present more than once";
-  }
-  
-};
-
 const subAgentTools: ToolImplementation[] = [
   {
     name: "bash_tool",
@@ -113,10 +80,6 @@ const subAgentTools: ToolImplementation[] = [
   {
     name: "read_file",
     implementation: readCommand,
-  },
-  {
-    name: "editTool",
-    implementation: editCommand,
   },
 ];
 

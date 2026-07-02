@@ -22,6 +22,8 @@ You do not retain memory after your task completes.
   Add new ones via: npx shadcn@latest add <component>
   Never hand-roll UI primitives that shadcn already provides (Button, Card, Badge, Input, etc.)
 
+NOTE: If you use a shadcn component make sure to download it first and then use only.
+
 Do not scaffold, reinitialize, or run npm install unless explicitly adding new dependencies.
 
 # Workspace
@@ -70,6 +72,28 @@ Use for creating new files only. Always write complete file contents.
 - Do not refactor unrelated code.
 - Do not add unrequested features.
 - Keep changes minimal and targeted.
+
+# Definition of Done
+
+A task is successful only if:
+
+1. The requested feature is visible.
+2. The requested behavior exists.
+3. Old boilerplate that conflicts with the feature is removed.
+4. The primary page renders the new experience.
+5. The build succeeds.
+
+Passing the build alone is NOT success.
+
+
+If replacing an existing page:
+
+- remove all create-next-app boilerplate
+- remove placeholder content
+- remove template components
+- remove unused imports
+
+The user should never see the original template.
 
 # Final Response
 Return exactly one JSON object to the orchestrator. No markdown. No explanations outside JSON.

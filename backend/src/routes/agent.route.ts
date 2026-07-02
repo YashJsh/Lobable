@@ -38,9 +38,7 @@ router.post("/create", async (req: Request, res: Response) => {
     MAIN_AGENT_SYSTEM_PROMPT,
     (event) => {
       const client = clientMap.get(projectId);
-      if (client) {
-        // askQuestions emits already-formatted SSE: "data: {...}\n\n"
-        // harness emits plain JSON strings that need wrapping
+      if (client) { 
         if (typeof event === "string" && event.startsWith("data:")) {
           client.write(event);
         } else {
@@ -57,8 +55,6 @@ router.post("/create", async (req: Request, res: Response) => {
   res.write(`data: ${JSON.stringify(response)}\n\n`);
   res.end();
 });
-
-
 
 router.post("/update", async (req: Request, res: Response) => {
   const body = req.body;
@@ -83,7 +79,6 @@ router.post("/update", async (req: Request, res: Response) => {
   res.write(`data: ${JSON.stringify(response)}\n\n`);
   res.end();
 });
-
 
 router.post("/answer", async (req: Request, res: Response) => {
   const { correlationId, answer } = req.body;
@@ -120,9 +115,9 @@ router.get("/sandbox-url", async (req: Request, res: Response) => {
 router.get("/get_all_files", async (req: Request, res: Response) => {
   try {
     const sandbox = await getSandbox();
-    let all = await sandbox.files.list("/home/user/react-app", { depth: 99 });
+    let all = await sandbox.files.list("/home/user/next-app", { depth: 99 });
     const filtered_files = all.filter(f => {
-      return !f.path.replace('/home/user/react-app', '').split('/').some(p => IGNORE.includes(p));
+      return !f.path.replace('/home/user/next-app', '').split('/').some(p => IGNORE.includes(p));
     })
     return res.status(200).json({
       success: true,
@@ -138,18 +133,18 @@ router.get("/get_all_files", async (req: Request, res: Response) => {
 
 router.get("/get_file", async (req: Request, res: Response) => {
   try {
-    const body = req.body;
-    if (!body.path) {
+    const path = req.query.path as string;
+    if (!path) {
       return res.status(403).json({
         success: false,
-        message: "Invalid body"
-      })
+        message: "path query param is required"
+      });
     }
     const sandbox = await getSandbox();
-    const file_response = await sandbox.files.read(body.path);
+    const file_response = await sandbox.files.read(path);
     return res.status(200).json({
-      sucess : true,
-      data : file_response
+      success: true,
+      data: file_response
     })
   } catch (error : any) {
     return res.status(500).json({

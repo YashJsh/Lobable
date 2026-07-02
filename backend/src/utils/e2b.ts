@@ -11,7 +11,7 @@ export async function getSandbox() {
     sandbox = await Sandbox.connect(sandboxId);
 
   } else {
-    sandbox = await Sandbox.create("react-app", {
+    sandbox = await Sandbox.create("next-app", {
       timeoutMs : 50000,
       lifecycle: {
         onTimeout: "pause",
@@ -19,8 +19,6 @@ export async function getSandbox() {
       }
     });
     sandboxId = sandbox.sandboxId;
-
   }
-
   return sandbox;
 }

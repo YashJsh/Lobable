@@ -87,7 +87,7 @@ class Harness {
             try {
               const toolOutput = await match.implementation(
                 JSON.parse(tool.function.arguments),
-                { emit : this.onEvent, workspaceRoot : "/home/user/react-app" }
+                { emit : this.onEvent, workspaceRoot : "/home/user/next-app" }
               );
               return {
                 role: "tool" as const,
