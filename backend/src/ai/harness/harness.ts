@@ -5,6 +5,7 @@ import type {
   ToolImplementation,
 } from "./harness.types";
 import { returnedAssistantMessage, userMessage } from "../utils";
+import { saveData } from "../../utils/conversation";
 
 class Harness {
   private provider: ModelProvider;
@@ -35,7 +36,10 @@ class Harness {
   }
 
   async sendMessage(input: string) {
+    saveData(this.transcript);
+    saveData(userMessage(input));
     this.transcript.push(userMessage(input));
+
     const startTime = Date.now();
     let turn = 0;
 
@@ -47,13 +51,13 @@ class Harness {
         this.transcript,
         this.toolDefinition,
       );
-      
       if (!result) {
         console.log(`[Harness] No response from AI after turn ${turn}`);
         return;
       };
       
       if (this.onEvent) {
+        saveData(result);
         this.onEvent(JSON.stringify(result));
       }
       
