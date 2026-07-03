@@ -8,6 +8,8 @@ import { toolsDefinition } from "../ai/tools/toolDefinition";
 import { IGNORE, mainAgentTools } from "../ai/tools/toolImplementation";
 import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 import { getSandbox } from "../utils/e2b";
+import { saveData } from "../utils/conversation";
+import { GroqProvider } from "../ai/providers/groq";
 
 const router = Router();
 
@@ -22,15 +24,20 @@ router.post("/create", async (req: Request, res: Response) => {
   }
 
   const projectId = body.projectId;
-
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
   clientMap.set(projectId, res);
   await getSandbox();
+  saveData({
+    username: "user-1",
+    projectId: body.projectId,
+    createdAt: Date.now().toString()
+  });
 
-  const provider = new OpenAIProvider(1, "gpt-4.1-mini");
+  const provider = new GroqProvider(1, "groq model");
+  //const provider = new OpenAIProvider(1, "gpt-4.1-mini");
   const harness = new Harness(
     provider,
     toolsDefinition,
