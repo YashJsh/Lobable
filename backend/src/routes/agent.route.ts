@@ -36,8 +36,13 @@ router.post("/create", async (req: Request, res: Response) => {
     createdAt: Date.now().toString()
   });
 
-  const provider = new GroqProvider(1, "groq model");
-  //const provider = new OpenAIProvider(1, "gpt-4.1-mini");
+  const modelName = body.model;
+  let provider;
+  if (body.provider === "openai" || (modelName && (modelName.toLowerCase().includes("gpt") || modelName.toLowerCase().includes("openai")))) {
+    provider = new OpenAIProvider(1, modelName || "gpt-4o-mini");
+  } else {
+    provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
+  }
   const harness = new Harness(
     provider,
     toolsDefinition,

@@ -54,7 +54,7 @@ class GroqProvider implements ModelProvider {
   async chat_once(message: Message[], tools: ToolDefiniton[]) {
     return this.client.chat.completions.create({
       messages: message as any,
-      model: "openai/gpt-oss-120b",
+      model: this.model,
       tools,
     });
   }

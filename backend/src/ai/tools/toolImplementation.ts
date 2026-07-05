@@ -24,7 +24,7 @@ const spwaningSubAgent = async (
       task: string,
       description: string,
     }
-    const provider = new OpenAIProvider(1, "gpt-4.1-mini");
+    const provider = new OpenAIProvider(1, "gpt-4o-mini");
     const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT.concat(`WORKSPACE_ROOT = ${options?.emit}`), options?.emit);
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
@@ -49,7 +49,7 @@ const create_task = async (args: unknown) => {
 
     const response = await client.chat.completions.create({
       messages,
-      model: "gpt-4.1-mini",
+      model: "gpt-4o-mini",
     })
 
     const choices = response.choices[0];
