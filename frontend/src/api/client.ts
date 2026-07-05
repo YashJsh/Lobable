@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_BASE_URL = "http://localhost:3001/v1/api";
+
 export const submitAnswer = async (correlationId: string, answer: string) => {
-  const response = await axios.post("http://localhost:3001/agent/answer", {
+  const response = await axios.post(`${API_BASE_URL}/agent/answer`, {
     correlationId,
     answer
   });
@@ -9,7 +11,7 @@ export const submitAnswer = async (correlationId: string, answer: string) => {
 };
 
 export const getSandboxUrl = async () => {
-  const response = await axios.get("http://localhost:3001/agent/sandbox-url");
+  const response = await axios.get(`${API_BASE_URL}/agent/sandbox-url`);
   return response.data;
 };
 
@@ -36,7 +38,7 @@ export const streamAgentCreate = async (
   onError: (err: any) => void
 ) => {
   try {
-    const response = await fetch("http://localhost:3001/agent/create", {
+    const response = await fetch(`${API_BASE_URL}/agent/create`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, projectId }),
@@ -108,7 +110,7 @@ export const streamAgentUpdate = async (
   onError: (err: any) => void
 ) => {
   try {
-    const response = await fetch("http://localhost:3001/agent/update", {
+    const response = await fetch(`${API_BASE_URL}/agent/update`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, projectId }),
@@ -170,13 +172,13 @@ export const streamAgentUpdate = async (
 };
 
 export const getAllFiles = async () => {
-  const response = await fetch("http://localhost:3001/agent/get_all_files");
+  const response = await fetch(`${API_BASE_URL}/agent/get_all_files`);
   return response.json();
 };
 
 export const getFileContent = async (path: string) => {
   const response = await fetch(
-    `http://localhost:3001/agent/get_file?path=${encodeURIComponent(path)}`
+    `${API_BASE_URL}/agent/get_file?path=${encodeURIComponent(path)}`
   );
   return response.json();
 };
