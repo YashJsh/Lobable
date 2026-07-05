@@ -85,7 +85,7 @@ class Harness {
               };
             }
             
-            console.log(`+++++++++++++++++++\n`);
+            console.log(`+++++++++++++++++++\n\n\n`);
             console.log('Executing Tool : ', tool.function.name);
             
             try {
