@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import AuthInitializer from "@/components/auth/AuthInitializer";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -33,7 +34,9 @@ export default function RootLayout({
       style={{ colorScheme: "dark" }}
     >
       <body className="min-h-full flex flex-col bg-black text-white">
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          <AuthInitializer>{children}</AuthInitializer>
+        </TooltipProvider>
       </body>
     </html>
   );

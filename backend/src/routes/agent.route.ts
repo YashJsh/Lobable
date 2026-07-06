@@ -30,15 +30,12 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
 
   clientMap.set(projectId, res);
-
-  // Read authenticated user ID directly from middleware context
+  
   const userId = req.userId!;
 
-  // Resolve E2B sandbox session
   const sandboxInstance = await getSandbox();
   const sandboxId = sandboxInstance.sandboxId;
 
-  // Create Project in Database
   await createProject(
     projectId,
     body.projectName || "New Project",
@@ -52,7 +49,6 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
     createdAt: Date.now().toString()
   });
 
-  // Save the user message to database
   await saveMessage(projectId, "USER", body.prompt);
 
   const modelName = body.model;
@@ -85,7 +81,6 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
 
   const response = await harness.sendMessage(body.prompt);
 
-  // Save final assistant message to database
   if (response) {
     await saveMessage(projectId, "ASSISTANT", response);
   }
@@ -111,7 +106,6 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   let harness = harnessMap.get(projectId);
   let sandboxId: string | undefined;
 
-  // Retrieve project from Database to get sandboxId
   const project = await prisma.project.findUnique({
     where: { id: projectId },
   });
@@ -153,12 +147,10 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
     harnessMap.set(projectId, harness);
   }
 
-  // Save the user message to database
   await saveMessage(projectId, "USER", body.prompt);
 
   const response = await harness.sendMessage(body.prompt);
 
-  // Save final assistant message to database
   if (response) {
     await saveMessage(projectId, "ASSISTANT", response);
   }

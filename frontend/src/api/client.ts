@@ -1,17 +1,39 @@
 import axios from "axios";
+import { useAuthStore } from "../store/useAuthStore";
 
 const API_BASE_URL = "http://localhost:3001/v1/api";
 
+const getAuthHeaders = (): Record<string, string> => {
+  // Read token from Zustand store
+  const token = useAuthStore.getState().token;
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  // Fallback to localStorage if store is not populated yet
+  if (typeof window !== "undefined") {
+    const localToken = localStorage.getItem("token");
+    if (localToken) {
+      return { Authorization: `Bearer ${localToken}` };
+    }
+  }
+  return {};
+};
+
 export const submitAnswer = async (correlationId: string, answer: string) => {
-  const response = await axios.post(`${API_BASE_URL}/agent/answer`, {
-    correlationId,
-    answer
-  });
+  const response = await axios.post(
+    `${API_BASE_URL}/agent/answer`,
+    { correlationId, answer },
+    { headers: getAuthHeaders() }
+  );
   return response.data;
 };
 
 export const getSandboxUrl = async () => {
-  const response = await axios.get(`${API_BASE_URL}/agent/sandbox-url`);
+  const response = await axios.get(
+    `${API_BASE_URL}/agent/sandbox-url`,
+    { headers: getAuthHeaders() }
+  );
   return response.data;
 };
 
@@ -40,7 +62,10 @@ export const streamAgentCreate = async (
   try {
     const response = await fetch(`${API_BASE_URL}/agent/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify({ prompt, projectId }),
     });
 
@@ -61,14 +86,14 @@ export const streamAgentCreate = async (
       const parts = buffer.split("\n\n");
       buffer = parts.pop() || "";
 
-     for (const part of parts) {
+      for (const part of parts) {
         const trimmed = part.trim();
         if (!trimmed) continue;
 
         let dataStr = "";
 
         for (const line of trimmed.split("\n")) {
-          if (line.startsWith("data:")){
+          if (line.startsWith("data:")) {
             const content = line.slice(5).trim();
             dataStr = dataStr ? dataStr + "\n" + content : content;
           }
@@ -85,7 +110,7 @@ export const streamAgentCreate = async (
                 question: parsed.question,
                 options: parsed.suggestions || parsed.options,
               });
-            }else{
+            } else {
               onMessage(parsed);
             }
           } catch (e) {
@@ -100,7 +125,6 @@ export const streamAgentCreate = async (
   }
 };
 
-
 export const streamAgentUpdate = async (
   prompt: string,
   projectId: string,
@@ -112,7 +136,10 @@ export const streamAgentUpdate = async (
   try {
     const response = await fetch(`${API_BASE_URL}/agent/update`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify({ prompt, projectId }),
     });
 
@@ -139,12 +166,12 @@ export const streamAgentUpdate = async (
         let dataStr = "";
 
         for (const line of trimmed.split("\n")) {
-          if (line.startsWith("data:")){
+          if (line.startsWith("data:")) {
             const content = line.slice(5).trim();
             dataStr = dataStr ? dataStr + "\n" + content : content;
           }
         }
-        
+
         console.log("+++++++++++++++++++");
         console.log("Data str is : ", JSON.parse(dataStr));
         if (dataStr) {
@@ -156,7 +183,7 @@ export const streamAgentUpdate = async (
                 question: parsed.question,
                 options: parsed.suggestions || parsed.options,
               });
-            }else{
+            } else {
               onMessage(parsed);
             }
           } catch (e) {
@@ -172,14 +199,16 @@ export const streamAgentUpdate = async (
 };
 
 export const getAllFiles = async () => {
-  const response = await fetch(`${API_BASE_URL}/agent/get_all_files`);
+  const response = await fetch(`${API_BASE_URL}/agent/get_all_files`, {
+    headers: getAuthHeaders(),
+  });
   return response.json();
 };
 
 export const getFileContent = async (path: string) => {
   const response = await fetch(
-    `${API_BASE_URL}/agent/get_file?path=${encodeURIComponent(path)}`
+    `${API_BASE_URL}/agent/get_file?path=${encodeURIComponent(path)}`,
+    { headers: getAuthHeaders() }
   );
   return response.json();
 };
-
