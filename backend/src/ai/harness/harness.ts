@@ -14,13 +14,15 @@ class Harness {
   private toolImplementation: ToolImplementation[];
   private onEvent?: (event: string) => void;
   private tokens;
+  private sandboxId?: string;
 
   constructor(
     provider: ModelProvider,
     toolDefinition: ToolDefiniton[],
     toolImplementation: ToolImplementation[],
     prompt: string,
-    onEvent?: (event : string) => void
+    onEvent?: (event : string) => void,
+    sandboxId?: string
   ) {
     this.provider = provider;
     this.toolDefinition = toolDefinition;
@@ -33,6 +35,7 @@ class Harness {
     this.toolImplementation = toolImplementation;
     this.onEvent = onEvent;
     this.tokens = 0;
+    this.sandboxId = sandboxId;
   }
 
   async sendMessage(input: string) {
@@ -91,7 +94,7 @@ class Harness {
             try {
               const toolOutput = await match.implementation(
                 JSON.parse(tool.function.arguments),
-                { emit : this.onEvent, workspaceRoot : "/home/user/next-app" }
+                { emit : this.onEvent, workspaceRoot : "/home/user/next-app", sandboxId: this.sandboxId }
               );
               return {
                 role: "tool" as const,

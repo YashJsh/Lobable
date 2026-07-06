@@ -1,24 +1,23 @@
 import { Sandbox } from "e2b";
 
-let sandbox: Sandbox | null = null;
-let sandboxId: string | null = null;
-
-export async function getSandbox() {
-  if (sandbox) {
-    return sandbox;
+export async function getSandbox(existingSandboxId?: string) {
+  if (existingSandboxId) {
+    try {
+      console.log(`[E2B] Connecting to existing sandbox session: ${existingSandboxId}`);
+      const sandboxInstance = await Sandbox.connect(existingSandboxId);
+      return sandboxInstance;
+    } catch (error) {
+      console.error(`[E2B] Failed to connect to sandbox ${existingSandboxId}, spinning up a new container instead.`, error);
+    }
   }
-  if (sandboxId) {
-    sandbox = await Sandbox.connect(sandboxId);
 
-  } else {
-    sandbox = await Sandbox.create("next-app", {
-      timeoutMs : 50000,
-      lifecycle: {
-        onTimeout: "pause",
-        autoResume: true
-      }
-    });
-    sandboxId = sandbox.sandboxId;
-  }
-  return sandbox;
+  console.log("[E2B] Creating a new sandbox session...");
+  const newSandbox = await Sandbox.create("next-app", {
+    timeoutMs: 50000,
+    lifecycle: {
+      onTimeout: "pause",
+      autoResume: true,
+    },
+  });
+  return newSandbox;
 }

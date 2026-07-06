@@ -2,15 +2,21 @@ import { getSandbox } from "../../utils/e2b";
 import type { ToolImplementation } from "../harness/harness.types";
 import { getAbsolutePath } from "../utils";
 
-const sandbox = await getSandbox();
-
-const bashToolImplementation = async (args: unknown) => {
+const bashToolImplementation = async (
+  args: unknown,
+  options?: {
+    emit?: (event: any) => void;
+    workspaceRoot?: string;
+    sandboxId?: string;
+  }
+) => {
   const { command } = args as {
     command: string;
   };
   console.log(`[subAgent Calling] :  bash_tool`);
   console.log(`COMMAND IS : `, command);
   try {
+    const sandbox = await getSandbox(options?.sandboxId);
     const response = await sandbox.commands.run(command);
     return JSON.stringify(response);
   } catch (error: any) {
@@ -24,7 +30,8 @@ const writeCommand = async (
   args: unknown,
   options?: {
     emit?: (event: any) => void;
-     workspaceRoot?: string;
+    workspaceRoot?: string;
+    sandboxId?: string;
   },
 ) => {
   const { path, content } = args as {
@@ -35,6 +42,7 @@ const writeCommand = async (
   console.log(`[subAgent Calling] : write_file `);
   console.log(`[path is : `, path);
   try {
+    const sandbox = await getSandbox(options?.sandboxId);
     const response = await sandbox.files.write(absolutePath, content);
     const readFile = await sandbox.files.read(absolutePath);
     return JSON.stringify({
@@ -52,14 +60,16 @@ export const readCommand = async (
   args: unknown,
   options?: {
     emit?: (event: any) => void;
-     workspaceRoot?: string;
+    workspaceRoot?: string;
+    sandboxId?: string;
   },
 ) => {
   console.log(`[subAgent Calling] :  read_file `);
   const { path } = args as { path: string };
-  const absolutePath = getAbsolutePath(options?. workspaceRoot!, path);
+  const absolutePath = getAbsolutePath(options?.workspaceRoot!, path);
   console.log(`ABSOLUTE PATH IS : ${absolutePath}`);
   try {
+    const sandbox = await getSandbox(options?.sandboxId);
     const result = await sandbox.files.read(absolutePath);
     return result;
   } catch (error: any) {

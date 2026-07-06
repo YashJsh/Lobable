@@ -20,6 +20,7 @@ model Project {
   name         String
   userId       String
   user         User          @relation(fields: [userId], references: [id])
+  sandboxId    String        @unique()
   conversation Conversation?
   createdAt    DateTime      @default(now())
 }

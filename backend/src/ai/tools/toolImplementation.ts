@@ -15,7 +15,8 @@ const spwaningSubAgent = async (
   args: unknown,
   options?: {
     emit?: (event: any) => void;
-    workspaceRoot?: string
+    workspaceRoot?: string;
+    sandboxId?: string;
   }
 ) => {
   console.log(`[Spawning Sub Agent] : args are : `, args);
@@ -25,7 +26,14 @@ const spwaningSubAgent = async (
       description: string,
     }
     const provider = new OpenAIProvider(1, "gpt-4o-mini");
-    const harness = new Harness(provider, subAgentToolDefinition, subAgentToolsImplementation, SUB_AGENT_SYSTEM_PROMPT.concat(`WORKSPACE_ROOT = ${options?.emit}`), options?.emit);
+    const harness = new Harness(
+      provider,
+      subAgentToolDefinition,
+      subAgentToolsImplementation,
+      SUB_AGENT_SYSTEM_PROMPT.concat(`\nWORKSPACE_ROOT = ${options?.workspaceRoot || "/home/user/next-app"}`),
+      options?.emit,
+      options?.sandboxId
+    );
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
   } catch (error: any) {
@@ -95,8 +103,15 @@ const askQuestions = async (args: unknown, options?: {
 
 export const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
 
-export const getFiles = async (args: unknown) => {
-  const sandbox = await getSandbox();
+export const getFiles = async (
+  args: unknown,
+  options?: {
+    emit?: (event: any) => void;
+    workspaceRoot?: string;
+    sandboxId?: string;
+  }
+) => {
+  const sandbox = await getSandbox(options?.sandboxId);
   let all = await sandbox.files.list("/home/user/next-app", { depth: 99 });
   const filtered_files = all.filter(f => {
     return !f.path.replace('/home/user/next-app', '').split('/').some(p => IGNORE.includes(p));

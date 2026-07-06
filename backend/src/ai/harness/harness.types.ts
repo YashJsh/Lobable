@@ -50,7 +50,8 @@ interface ToolImplementation{
   name: string,
   implementation: (args: unknown, options?: {
     emit?: (event: any) => void,
-    workspaceRoot? : string
+    workspaceRoot?: string,
+    sandboxId?: string
   }) => Promise<string>,
 }
 
