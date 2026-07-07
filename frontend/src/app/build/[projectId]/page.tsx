@@ -7,6 +7,8 @@ import { getSandboxUrl, submitAnswer, streamAgentCreate, streamAgentUpdate } fro
 import ChatPanel from "@/components/build/ChatPanel";
 import PreviewPanel from "@/components/build/PreviewPanel";
 import { MessageItem, BuildStatus } from "@/components/build/types";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useProjectStore } from "@/store/useProjectStore";
 
 function BuildContent() {
   const router = useRouter();
@@ -14,26 +16,42 @@ function BuildContent() {
   const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState<string | null>(null);
 
-  useEffect(() => {
-      const queryPrompt = searchParams.get("prompt");
-      const storedPrompt = sessionStorage.getItem(`prompt-${projectId}`);
-      console.log("[Build] queryPrompt:", queryPrompt, "storedPrompt:", storedPrompt);
-      setPrompt(storedPrompt || queryPrompt);
-  }, [projectId, searchParams]);
-
-  console.log("[Build] render | prompt:", prompt, "projectId:", projectId);
-  
-  const [status, setStatus] = useState<BuildStatus>("idle");
-  const [messages, setMessages] = useState<MessageItem[]>([]);
-  console.log("[Build] messages state:", messages);
-  const [sandboxUrl, setSandboxUrl] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submittingAnswerId, setSubmittingAnswerId] = useState<string | null>(null);
+  const {
+    messages,
+    status,
+    sandboxUrl,
+    answers,
+    submittingAnswerId,
+    setMessages,
+    setStatus,
+    setSandboxUrl,
+    setAnswers,
+    setSubmittingAnswerId,
+    fetchProjectDetails,
+    clearActiveProject,
+  } = useProjectStore();
 
   const [updatePrompt, setUpdatePrompt] = useState("");
-
   const buildStarted = useRef(false);
   const sandboxUrlRef = useRef<string | null>(null);
+
+  // 1. Fetch project details / transcripts from database on mount or route transition
+  useEffect(() => {
+    if (projectId) {
+      fetchProjectDetails(projectId);
+    }
+    return () => {
+      clearActiveProject();
+      buildStarted.current = false;
+    };
+  }, [projectId, fetchProjectDetails, clearActiveProject]);
+
+  // 2. Fetch initial prompt from search params or session storage
+  useEffect(() => {
+    const queryPrompt = searchParams.get("prompt");
+    const storedPrompt = sessionStorage.getItem(`prompt-${projectId}`);
+    setPrompt(storedPrompt || queryPrompt);
+  }, [projectId, searchParams]);
 
   useEffect(() => {
     sandboxUrlRef.current = sandboxUrl;
@@ -169,16 +187,17 @@ function BuildContent() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, []);
+  }, [setSandboxUrl]);
 
-  // Start building when the page mounts with valid parameters
+  // Start building when the page mounts with valid parameters (only if no existing messages)
   useEffect(() => {
     if (buildStarted.current) return;
     if (!prompt || !projectId) return;
+    if (messages.length > 0) return; // Prevent double trigger if project is loaded from history
 
     buildStarted.current = true;
     startBuild();
-  }, [prompt, projectId]);
+  }, [prompt, projectId, messages.length]);
 
   const startBuild = async () => {
     if (!prompt || !projectId) return;
@@ -325,26 +344,28 @@ function BuildContent() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black text-zinc-100 font-sans selection:bg-white selection:text-black">
-      <ChatPanel
-        status={status}
-        messages={messages}
-        answers={answers}
-        submittingAnswerId={submittingAnswerId}
-        updatePrompt={updatePrompt}
-        onUpdatePromptChange={setUpdatePrompt}
-        onUpdateSubmit={handleUpdateSubmit}
-        onAnswerChange={(correlationId, val) => setAnswers(prev => ({ ...prev, [correlationId]: val }))}
-        onAnswerSubmit={handleAnswerSubmit}
-        onOptionSubmit={handleOptionSubmit}
-        onBack={() => router.push("/")}
-      />
-      <PreviewPanel
-        sandboxUrl={sandboxUrl}
-        status={status}
-        onReload={reloadIframe}
-      />
-    </div>
+    <DashboardShell>
+      <div className="flex-1 flex overflow-hidden relative">
+        <ChatPanel
+          status={status}
+          messages={messages}
+          answers={answers}
+          submittingAnswerId={submittingAnswerId}
+          updatePrompt={updatePrompt}
+          onUpdatePromptChange={setUpdatePrompt}
+          onUpdateSubmit={handleUpdateSubmit}
+          onAnswerChange={(correlationId, val) => setAnswers(prev => ({ ...prev, [correlationId]: val }))}
+          onAnswerSubmit={handleAnswerSubmit}
+          onOptionSubmit={handleOptionSubmit}
+          onBack={() => router.push("/")}
+        />
+        <PreviewPanel
+          sandboxUrl={sandboxUrl}
+          status={status}
+          onReload={reloadIframe}
+        />
+      </div>
+    </DashboardShell>
   );
 }
 

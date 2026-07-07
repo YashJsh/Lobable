@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/useAuthStore";
 
 const API_BASE_URL = "http://localhost:3001/v1/api";
 
-const getAuthHeaders = (): Record<string, string> => {
+export const getAuthHeaders = (): Record<string, string> => {
   // Read token from Zustand store
   const token = useAuthStore.getState().token;
   if (token) {

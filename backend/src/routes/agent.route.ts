@@ -30,7 +30,7 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
 
   clientMap.set(projectId, res);
-  
+
   const userId = req.userId!;
 
   const sandboxInstance = await getSandbox();
@@ -66,7 +66,7 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
     MAIN_AGENT_SYSTEM_PROMPT,
     (event) => {
       const client = clientMap.get(projectId);
-      if (client) { 
+      if (client) {
         if (typeof event === "string" && event.startsWith("data:")) {
           client.write(event);
         } else {
@@ -134,7 +134,7 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
       MAIN_AGENT_SYSTEM_PROMPT,
       (event) => {
         const client = clientMap.get(projectId);
-        if (client) { 
+        if (client) {
           if (typeof event === "string" && event.startsWith("data:")) {
             client.write(event);
           } else {
@@ -226,10 +226,10 @@ router.get("/get_file", async (req: Request, res: Response) => {
       success: true,
       data: file_response
     })
-  } catch (error : any) {
+  } catch (error: any) {
     return res.status(500).json({
-      success : false,
-      message : error.message ?? "Internal Server Error"
+      success: false,
+      message: error.message ?? "Internal Server Error"
     })
   }
 })
