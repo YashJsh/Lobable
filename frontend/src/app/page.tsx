@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowUp } from "lucide-react";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 
@@ -15,10 +16,8 @@ export default function PromptPage() {
     e.preventDefault();
     if (!prompt.trim()) return;
 
-    // Generate a random project ID
     const projectId = Math.random().toString(36).substring(2, 15);
     
-    // Save prompt to sessionStorage to keep the URL clean
     if (typeof window !== "undefined") {
       sessionStorage.setItem(`prompt-${projectId}`, prompt.trim());
     }
@@ -35,15 +34,13 @@ export default function PromptPage() {
   return (
     <DashboardShell>
       <div className="flex-1 flex flex-col items-center justify-center px-6 relative overflow-hidden">
-        {/* Subtle grid pattern background for the prompt workspace */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f0f0f_1px,transparent_1px),linear-gradient(to_bottom,#0f0f0f_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
         <div className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center space-y-8">
-          {/* Logo or Title */}
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 border border-white/10 px-3 py-1 rounded-full text-xs font-mono tracking-widest text-zinc-500 bg-zinc-950/50 backdrop-blur-sm">
+            <Badge variant="outline" className="border-white/10 text-xs font-mono tracking-widest text-zinc-500 bg-zinc-950/50 backdrop-blur-sm">
               LOBABLE v1.0
-            </div>
+            </Badge>
             <h1 className="text-4xl sm:text-5xl font-light tracking-tight font-sans text-zinc-100">
               What do you want to build?
             </h1>
@@ -52,7 +49,6 @@ export default function PromptPage() {
             </p>
           </div>
 
-          {/* Input box */}
           <form onSubmit={handleSubmit} className="w-full relative group">
             <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/50 backdrop-blur-md transition-all duration-300 focus-within:border-white/30 focus-within:shadow-[0_0_30px_rgba(255,255,255,0.02)] p-2">
               <Textarea
@@ -80,22 +76,22 @@ export default function PromptPage() {
             </div>
           </form>
 
-          {/* Quick suggestions */}
-          <div className="flex flex-wrap justify-center gap-2 text-xs font-mono text-zinc-500">
+          <div className="flex flex-wrap justify-center gap-2">
             {[
               "Interactive Dashboard",
               "Markdown Editor",
               "Kanban Board",
               "Audio Synthesizer",
             ].map((tag) => (
-              <button
+              <Button
                 key={tag}
                 type="button"
+                variant="ghost"
                 onClick={() => setPrompt(`Build a modern, highly interactive ${tag.toLowerCase()} that includes...`)}
-                className="border border-white/5 bg-zinc-950/30 hover:bg-zinc-900/60 hover:text-zinc-300 transition-colors px-3 py-1.5 rounded-lg cursor-pointer"
+                className="text-xs font-mono text-zinc-500 border border-white/5 bg-zinc-950/30 hover:bg-zinc-900/60 hover:text-zinc-300 px-3 py-1.5 rounded-lg h-auto"
               >
                 {tag}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

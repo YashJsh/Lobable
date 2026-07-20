@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthHeaders } from "./client";
 
 const API_BASE_URL = "http://localhost:3001/v1/api";
 
@@ -17,4 +18,14 @@ export const signupCall = async (email: string, password: string, name: string) 
     name,
   });
   return response.data;
+};
+
+export const validateSession = async () => {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error("Session invalid");
+  }
+  return response.json();
 };

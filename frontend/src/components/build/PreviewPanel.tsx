@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllFiles, getFileContent } from "@/api/client";
 import { BuildStatus } from "./types";
 
@@ -35,14 +37,12 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Fetch files when switching to Code tab
   useEffect(() => {
     if (activeTab === "code" && isCompleted && files.length === 0) {
       fetchFiles();
     }
   }, [activeTab, isCompleted]);
 
-  // Reset tab when a new build starts
   useEffect(() => {
     if (!isCompleted) {
       setActiveTab("preview");
@@ -76,7 +76,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
       if (res.success && res.data !== undefined) {
         setFileContent(res.data);
       } else if (res.sucess && res.data !== undefined) {
-        // backend typo fallback
         setFileContent(res.data);
       }
     } catch (err) {
@@ -87,7 +86,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
     }
   };
 
-  // ─── Building state ───────────────────────────────────────────────────────
   if (!isCompleted) {
     return (
       <div className="flex-1 flex flex-col bg-black h-screen relative">
@@ -95,9 +93,9 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-zinc-600">preview</span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider border border-white/5 px-2 py-1 rounded-full">
+          <Badge variant="secondary" className="text-[10px] font-mono uppercase tracking-wider border border-white/5">
             {status === "waiting" ? "waiting for input" : "building"}
-          </span>
+          </Badge>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-black text-center px-8">
           <div className="relative">
@@ -130,35 +128,33 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
     );
   }
 
-  // ─── Completed state ──────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col bg-black h-screen relative min-h-0">
-      {/* Header bar */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-[#050505] shrink-0">
         <div className="flex items-center gap-3 flex-1">
-          {/* Tab toggle */}
-          <div className="flex items-center border border-white/10 rounded-lg bg-black p-0.5 select-none shrink-0">
-            <button
-              onClick={() => setActiveTab("preview")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
-                activeTab === "preview" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <Monitor className="size-3.5" />
-              Preview
-            </button>
-            <button
-              onClick={() => setActiveTab("code")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono transition-all cursor-pointer ${
-                activeTab === "code" ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <Code className="size-3.5" />
-              Code
-            </button>
-          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "preview" | "code")}
+            className="flex items-center"
+          >
+            <TabsList variant="default" className="border border-white/10 rounded-lg bg-black p-0.5 h-auto gap-0">
+              <TabsTrigger
+                value="preview"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono data-active:bg-zinc-900 data-active:text-white text-zinc-500 hover:text-zinc-300 cursor-pointer"
+              >
+                <Monitor className="size-3.5" />
+                Preview
+              </TabsTrigger>
+              <TabsTrigger
+                value="code"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono data-active:bg-zinc-900 data-active:text-white text-zinc-500 hover:text-zinc-300 cursor-pointer"
+              >
+                <Code className="size-3.5" />
+                Code
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {/* URL bar — only in preview tab */}
           {activeTab === "preview" && (
             <div className="flex-1 max-w-xl flex items-center border border-white/10 rounded-lg bg-black px-3 py-1 text-xs text-zinc-400 font-mono select-none">
               <span className="text-zinc-700 mr-1 select-none">preview:</span>
@@ -176,7 +172,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
           )}
         </div>
 
-        {/* Browser controls — only in preview tab */}
         {activeTab === "preview" && (
           <div className="flex items-center gap-2">
             <Button
@@ -199,7 +194,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
         )}
       </div>
 
-      {/* Viewport */}
       <div className="flex-1 min-h-0 bg-black flex items-stretch">
         {activeTab === "preview" ? (
           <div className="flex-1 flex items-center justify-center p-4">
@@ -228,9 +222,7 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
             </div>
           </div>
         ) : (
-          /* Code explorer */
           <div className="flex flex-1 min-h-0">
-            {/* File tree */}
             <div className="w-[240px] border-r border-white/10 flex flex-col bg-black/40 shrink-0">
               <div className="p-3 border-b border-white/10 text-xs font-mono uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 font-semibold select-none">
                 <Folder className="size-3.5 text-zinc-400" />
@@ -254,18 +246,19 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
                         .replace("/home/user/react-app/", "");
                       const isSelected = selectedFile === file.path;
                       return (
-                        <button
+                        <Button
                           key={file.path}
+                          variant="ghost"
                           onClick={() => handleFileSelect(file.path)}
-                          className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                          className={`w-full justify-start px-2.5 py-1.5 rounded-lg text-xs font-mono gap-2 h-auto cursor-pointer ${
                             isSelected
-                              ? "bg-white text-black font-medium"
+                              ? "bg-white text-black font-medium hover:bg-white"
                               : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
                           }`}
                         >
                           <FileCode className={`size-3.5 shrink-0 ${isSelected ? "text-black" : "text-zinc-500"}`} />
                           <span className="truncate">{relativePath}</span>
-                        </button>
+                        </Button>
                       );
                     })
                   )}
@@ -273,7 +266,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
               </ScrollArea>
             </div>
 
-            {/* Code viewer */}
             <div className="flex-1 flex flex-col min-h-0 bg-[#030303]">
               {selectedFile ? (
                 <>
