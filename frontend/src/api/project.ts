@@ -43,3 +43,10 @@ export const getProjectDetails = async (projectId: string): Promise<{ success: b
   });
   return response.data;
 };
+
+export const deleteProjectCall = async (projectId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await axios.delete(`${API_BASE_URL}/project/${projectId}`, {
+    headers: getAuthHeaders(),
+  });
+  return response.data;
+};

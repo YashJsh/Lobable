@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderGit2, LogOut, User } from "lucide-react";
+import { Plus, FolderGit2, LogOut, User, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -15,7 +15,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const projectId = params?.projectId as string | undefined;
 
   const { token, user, logout } = useAuthStore();
-  const { projects, fetchProjects, clearActiveProject } = useProjectStore();
+  const { projects, fetchProjects, deleteProject, clearActiveProject } = useProjectStore();
 
   useEffect(() => {    
     if (typeof window !== "undefined" && !localStorage.getItem("token")) {
@@ -37,6 +37,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const handleNewProject = () => {
     clearActiveProject();
     router.push("/");
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this project? This will permanently erase the sandbox files and chat history.")) {
+      await deleteProject(id);
+      if (projectId === id) {
+        router.push("/");
+      }
+    }
   };
 
   return (
@@ -83,7 +94,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     <Link
                       key={p.id}
                       href={`/build/${p.id}`}
-                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-mono transition-all group ${
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-mono transition-all group relative ${
                         isActive
                           ? "bg-zinc-900 text-zinc-100 border border-white/10"
                           : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40 border border-transparent"
@@ -92,7 +103,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       <FolderGit2 className={`size-4 transition-colors ${
                         isActive ? "text-white" : "text-zinc-700 group-hover:text-zinc-500"
                       }`} />
-                      <span className="truncate flex-1 text-left">{p.name}</span>
+                      <span className="truncate flex-1 text-left pr-6">{p.name}</span>
+
+                      <button
+                        onClick={(e) => handleDelete(e, p.id)}
+                        className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-600 transition-all rounded cursor-pointer"
+                        title="Delete Project"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
                     </Link>
                   );
                 })

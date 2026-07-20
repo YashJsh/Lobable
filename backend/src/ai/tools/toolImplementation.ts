@@ -7,7 +7,6 @@ import { readCommand, subAgentToolsImplementation } from "./subAgentToolImplemen
 import { subAgentToolDefinition } from "./toolDefinition";
 import { TODO_AGENT_SYSTEM_PROMPT } from "../prompt/todoAgentSystemPrompt";
 import { waitForResponse } from "../../utils/pendingResponse";
-import type Sandbox from "e2b";
 import { getSandbox } from "../../utils/e2b";
 
 

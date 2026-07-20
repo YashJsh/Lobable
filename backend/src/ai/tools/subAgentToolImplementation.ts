@@ -13,8 +13,10 @@ const bashToolImplementation = async (
   const { command } = args as {
     command: string;
   };
+  
   console.log(`[subAgent Calling] :  bash_tool`);
   console.log(`COMMAND IS : `, command);
+  console.log("SANDBOX ID IS : ", options?.sandboxId);
   try {
     const sandbox = await getSandbox(options?.sandboxId);
     const response = await sandbox.commands.run(command);
@@ -41,6 +43,7 @@ const writeCommand = async (
   const absolutePath = getAbsolutePath(options?.workspaceRoot!, path);
   console.log(`[subAgent Calling] : write_file `);
   console.log(`[path is : `, path);
+  console.log("SANDBOX ID IS : ", options?.sandboxId);
   try {
     const sandbox = await getSandbox(options?.sandboxId);
     const response = await sandbox.files.write(absolutePath, content);
@@ -68,6 +71,7 @@ export const readCommand = async (
   const { path } = args as { path: string };
   const absolutePath = getAbsolutePath(options?.workspaceRoot!, path);
   console.log(`ABSOLUTE PATH IS : ${absolutePath}`);
+  console.log("SANDBOX ID IS : ", options?.sandboxId);
   try {
     const sandbox = await getSandbox(options?.sandboxId);
     const result = await sandbox.files.read(absolutePath);

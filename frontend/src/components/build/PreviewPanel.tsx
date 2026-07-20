@@ -11,12 +11,13 @@ import { getAllFiles, getFileContent } from "@/api/client";
 import { BuildStatus } from "./types";
 
 interface PreviewPanelProps {
+  projectId: string;
   sandboxUrl: string | null;
   status: BuildStatus;
   onReload: () => void;
 }
 
-export default function PreviewPanel({ sandboxUrl, status, onReload }: PreviewPanelProps) {
+export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }: PreviewPanelProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
   const [files, setFiles] = useState<any[]>([]);
@@ -54,7 +55,7 @@ export default function PreviewPanel({ sandboxUrl, status, onReload }: PreviewPa
   const fetchFiles = async () => {
     setLoadingFiles(true);
     try {
-      const res = await getAllFiles();
+      const res = await getAllFiles(projectId);
       if (res.success && res.data) {
         setFiles(res.data.filter((f: any) => f.type !== "dir"));
       }
@@ -71,7 +72,7 @@ export default function PreviewPanel({ sandboxUrl, status, onReload }: PreviewPa
     setLoadingContent(true);
     setFileContent(null);
     try {
-      const res = await getFileContent(filePath);
+      const res = await getFileContent(projectId, filePath);
       if (res.success && res.data !== undefined) {
         setFileContent(res.data);
       } else if (res.sucess && res.data !== undefined) {

@@ -1,9 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import SignupForm from "@/components/auth/SignupForm";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function SignupPage() {
+  const router = useRouter();
+  const token = useAuthStore((s) => s.token);
+
+  useEffect(() => {
+    if (token) {
+      router.replace("/");
+    }
+  }, [token, router]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white px-4 selection:bg-white selection:text-black relative overflow-hidden">
       {/* Background patterns: ultra-minimalist grid pattern */}

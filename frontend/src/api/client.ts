@@ -29,9 +29,9 @@ export const submitAnswer = async (correlationId: string, answer: string) => {
   return response.data;
 };
 
-export const getSandboxUrl = async () => {
+export const getSandboxUrl = async (projectId: string) => {
   const response = await axios.get(
-    `${API_BASE_URL}/agent/sandbox-url`,
+    `${API_BASE_URL}/agent/sandbox-url?projectId=${projectId}`,
     { headers: getAuthHeaders() }
   );
   return response.data;
@@ -198,16 +198,16 @@ export const streamAgentUpdate = async (
   }
 };
 
-export const getAllFiles = async () => {
-  const response = await fetch(`${API_BASE_URL}/agent/get_all_files`, {
+export const getAllFiles = async (projectId: string) => {
+  const response = await fetch(`${API_BASE_URL}/agent/get_all_files?projectId=${projectId}`, {
     headers: getAuthHeaders(),
   });
   return response.json();
 };
 
-export const getFileContent = async (path: string) => {
+export const getFileContent = async (projectId: string, path: string) => {
   const response = await fetch(
-    `${API_BASE_URL}/agent/get_file?path=${encodeURIComponent(path)}`,
+    `${API_BASE_URL}/agent/get_file?projectId=${projectId}&path=${encodeURIComponent(path)}`,
     { headers: getAuthHeaders() }
   );
   return response.json();

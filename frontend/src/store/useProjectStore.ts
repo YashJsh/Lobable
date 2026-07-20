@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Project, ProjectDetails, getUserProjects, getProjectDetails } from "@/api/project";
+import { Project, ProjectDetails, getUserProjects, getProjectDetails, deleteProjectCall } from "@/api/project";
 import { MessageItem, BuildStatus } from "@/components/build/types";
 
 interface ProjectState {
@@ -22,6 +22,7 @@ interface ProjectState {
 
   fetchProjects: () => Promise<void>;
   fetchProjectDetails: (projectId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
   clearActiveProject: () => void;
 }
 
@@ -80,13 +81,30 @@ export const useProjectStore = create<ProjectState>((set) => ({
               timestamp: new Date(m.createdAt),
             };
           });
-          set({ messages: mappedMessages });
+          set({ messages: mappedMessages, status: "completed" });
         } else {
-          set({ messages: [] });
+          set({ messages: [], status: "idle" });
         }
       }
     } catch (err) {
       console.error(`Failed to fetch project details for ${projectId}:`, err);
+    }
+  },
+
+  deleteProject: async (projectId: string) => {
+    try {
+      const res = await deleteProjectCall(projectId);
+      if (res.success) {
+        set((state) => ({
+          projects: state.projects.filter((p) => p.id !== projectId),
+          activeProject: state.activeProject?.id === projectId ? null : state.activeProject,
+          messages: state.activeProject?.id === projectId ? [] : state.messages,
+          sandboxUrl: state.activeProject?.id === projectId ? null : state.sandboxUrl,
+          status: state.activeProject?.id === projectId ? "idle" : state.status,
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to delete project ${projectId}:`, err);
     }
   },
 

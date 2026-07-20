@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { getSandboxUrl, submitAnswer, streamAgentCreate, streamAgentUpdate } from "@/api/client";
 import ChatPanel from "@/components/build/ChatPanel";
 import PreviewPanel from "@/components/build/PreviewPanel";
-import { MessageItem, BuildStatus } from "@/components/build/types";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { useProjectStore } from "@/store/useProjectStore";
 
@@ -166,13 +165,14 @@ function BuildContent() {
     );
   };
 
-  // Poll for the sandbox URL
+  // Fetch sandbox URL once build completes or loads from history
   useEffect(() => {
-    let intervalId: any;
+    if (sandboxUrl) return;
+    if (status !== "completed") return;
 
-    const checkUrl = async () => {
+    const fetchUrl = async () => {
       try {
-        const data = await getSandboxUrl();
+        const data = await getSandboxUrl(projectId);
         if (data.success && data.url) {
           setSandboxUrl(data.url);
         }
@@ -181,13 +181,8 @@ function BuildContent() {
       }
     };
 
-    checkUrl();
-    intervalId = setInterval(checkUrl, 5000);
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [setSandboxUrl]);
+    fetchUrl();
+  }, [projectId, status, sandboxUrl, setSandboxUrl]);
 
   // Start building when the page mounts with valid parameters (only if no existing messages)
   useEffect(() => {
@@ -360,6 +355,7 @@ function BuildContent() {
           onBack={() => router.push("/")}
         />
         <PreviewPanel
+          projectId={projectId}
           sandboxUrl={sandboxUrl}
           status={status}
           onReload={reloadIframe}

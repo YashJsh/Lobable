@@ -6,12 +6,13 @@ import { Harness } from "../ai/harness/harness";
 import { toolsDefinition } from "../ai/tools/toolDefinition";
 import { IGNORE, mainAgentTools } from "../ai/tools/toolImplementation";
 import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
-import { getSandbox } from "../utils/e2b";
+import { getSandbox, createSandbox } from "../utils/e2b";
 import { saveData } from "../utils/conversation";
 import { GroqProvider } from "../ai/providers/groq";
 import { createProject, saveMessage } from "../utils/db";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { getProjectName } from "../utils/namingAgent";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ export const clientMap = new Map<string, Response>();
 export const harnessMap = new Map<string, Harness>();
 
 router.post("/create", authMiddleware, async (req: Request, res: Response) => {
+  console.log("****Request Recieved****");
   const body = req.body;
   if (!body.prompt) {
     return res.status(400).send("prompt is required");
@@ -32,13 +34,16 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   clientMap.set(projectId, res);
 
   const userId = req.userId!;
-
-  const sandboxInstance = await getSandbox();
+  console.log("Calling sandbox first time");
+  const sandboxInstance = await createSandbox();
   const sandboxId = sandboxInstance.sandboxId;
+  console.log("SANDBOX ID FIRST TIME : ", sandboxId);
 
+  const projectName = await getProjectName(body.prompt);
+  
   await createProject(
     projectId,
-    body.projectName || "New Project",
+    projectName,
     userId,
     sandboxId
   );
@@ -50,6 +55,7 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   });
 
   await saveMessage(projectId, "USER", body.prompt);
+  console.log("Saved message Successfully");
 
   const modelName = body.model;
   let provider;
@@ -58,7 +64,9 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   } else {
     provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
   }
-
+  //For testing it is here.
+  provider = new OpenAIProvider(1, modelName || "gpt-4o-mini"); 
+  
   const harness = new Harness(
     provider,
     toolsDefinition,
@@ -79,8 +87,9 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
 
   harnessMap.set(projectId, harness);
 
-  const response = await harness.sendMessage(body.prompt);
+  console.log("Sending to harness");
 
+  const response = await harness.sendMessage(body.prompt);
   if (response) {
     await saveMessage(projectId, "ASSISTANT", response);
   }
@@ -177,7 +186,17 @@ router.post("/answer", async (req: Request, res: Response) => {
 
 router.get("/sandbox-url", async (req: Request, res: Response) => {
   try {
-    const sandbox = await getSandbox();
+    const projectId = req.query.projectId as string;
+    if (!projectId) {
+      return res.status(400).json({ success: false, message: "projectId is required" });
+    }
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found" });
+    }
+    const sandbox = await getSandbox(project.sandboxId);
     const url = sandbox.getHost(3000);
     return res.status(200).json({
       success: true,
@@ -194,7 +213,17 @@ router.get("/sandbox-url", async (req: Request, res: Response) => {
 
 router.get("/get_all_files", async (req: Request, res: Response) => {
   try {
-    const sandbox = await getSandbox();
+    const projectId = req.query.projectId as string;
+    if (!projectId) {
+      return res.status(400).json({ success: false, message: "projectId query param is required" });
+    }
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found in database" });
+    }
+    const sandbox = await getSandbox(project.sandboxId);
     let all = await sandbox.files.list("/home/user/next-app", { depth: 99 });
     const filtered_files = all.filter(f => {
       return !f.path.replace('/home/user/next-app', '').split('/').some(p => IGNORE.includes(p));
@@ -206,7 +235,7 @@ router.get("/get_all_files", async (req: Request, res: Response) => {
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: error?.message ?? "Unabe to get the files."
+      message: error?.message ?? "Unable to get the files."
     })
   }
 });
@@ -214,13 +243,20 @@ router.get("/get_all_files", async (req: Request, res: Response) => {
 router.get("/get_file", async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
-    if (!path) {
-      return res.status(403).json({
+    const projectId = req.query.projectId as string;
+    if (!path || !projectId) {
+      return res.status(400).json({
         success: false,
-        message: "path query param is required"
+        message: "path and projectId query params are required"
       });
     }
-    const sandbox = await getSandbox();
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found in database" });
+    }
+    const sandbox = await getSandbox(project.sandboxId);
     const file_response = await sandbox.files.read(path);
     return res.status(200).json({
       success: true,
