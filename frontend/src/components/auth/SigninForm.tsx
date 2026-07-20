@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,10 +9,22 @@ import { signinCall } from "@/api/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Loader2, KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
-// 1. Define Signin Validation Schema
 const signinSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  email: z.email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -21,11 +33,10 @@ type SigninFields = z.infer<typeof signinSchema>;
 export default function SigninForm() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  // 2. Setup React Hook Form with Zod resolver
   const {
     register,
     handleSubmit,
@@ -47,53 +58,60 @@ export default function SigninForm() {
         setServerError(data.message || "Failed to log in");
       }
     } catch (err: any) {
-      setServerError(err?.response?.data?.message || "Invalid credentials or server connection issue.");
+      setServerError(
+        err?.response?.data?.message || "Invalid credentials or server connection issue."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md relative z-10">
-      {/* Auth Card wrapper */}
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 backdrop-blur-md p-8 shadow-2xl transition-all duration-300 hover:border-white/15">
-        
-        {/* Header */}
-        <div className="text-center space-y-2 mb-8">
-          <div className="inline-flex items-center gap-1.5 border border-white/10 px-3 py-1 rounded-full text-[10px] font-mono tracking-widest text-zinc-500 bg-zinc-950/50">
-            LOBABLE AUTH
-          </div>
-          <h2 className="text-2xl font-light text-zinc-100 tracking-tight font-sans">
+    <Card className="w-full max-w-md relative z-10 border-white/10 bg-zinc-950/60 backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/15 ring-0 [--card-spacing:--spacing(8)] gap-0">
+      <CardHeader className="text-center space-y-4 pb-8">
+        <Badge
+          variant="outline"
+          className="mx-auto border-white/10 text-[10px] font-mono tracking-widest text-zinc-500 bg-zinc-950/50"
+        >
+          LOBABLE AUTH
+        </Badge>
+        <div className="space-y-2">
+          <CardTitle className="text-2xl font-light text-zinc-100 tracking-tight font-sans">
             Welcome Back
-          </h2>
-          <p className="text-xs text-zinc-500 font-light font-sans">
+          </CardTitle>
+          <CardDescription className="text-xs text-zinc-500 font-light font-sans">
             Sign in to access your sandboxes and agent workspace.
-          </p>
+          </CardDescription>
         </div>
+      </CardHeader>
 
-        {/* Server Error message */}
+      <CardContent className="space-y-5">
         {serverError && (
-          <div className="mb-6 p-3 rounded-lg border border-red-500/20 bg-red-950/10 text-red-400 text-xs font-mono text-center">
-            {serverError}
-          </div>
+          <Alert
+            variant="destructive"
+            className="border-red-500/20 bg-red-950/10 text-red-400"
+          >
+            <AlertDescription className="text-xs font-mono text-center text-red-400">
+              {serverError}
+            </AlertDescription>
+          </Alert>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Email field */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
+            <Label className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
               Email Address
-            </label>
+            </Label>
             <div className="relative flex items-center group">
-              <Mail className="absolute left-3.5 size-4 text-zinc-600 transition-colors group-focus-within:text-zinc-400" />
-              <input
+              <Mail className="absolute left-3.5 size-4 text-zinc-600 transition-colors group-focus-within:text-zinc-400 z-10" />
+              <Input
                 type="email"
                 {...register("email")}
                 placeholder="you@example.com"
-                className={`w-full bg-zinc-900/40 border rounded-xl py-3 pl-11 pr-4 text-sm text-zinc-200 placeholder-zinc-700 outline-none transition-all focus:bg-zinc-900/60 ${
-                  errors.email ? "border-red-500/40 focus:border-red-500/60" : "border-white/10 focus:border-white/30"
-                }`}
+                className={`h-10 rounded-xl bg-zinc-900/40 pl-11 pr-4 text-sm text-zinc-200 placeholder-zinc-700 transition-all focus:bg-zinc-900/60 ${errors.email
+                    ? "border-red-500/40 focus:border-red-500/60"
+                    : "border-white/10 focus:border-white/30"
+                  }`}
               />
             </div>
             {errors.email && (
@@ -103,20 +121,20 @@ export default function SigninForm() {
             )}
           </div>
 
-          {/* Password field */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block">
+            <Label className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
               Password
-            </label>
+            </Label>
             <div className="relative flex items-center group">
-              <KeyRound className="absolute left-3.5 size-4 text-zinc-600 transition-colors group-focus-within:text-zinc-400" />
-              <input
+              <KeyRound className="absolute left-3.5 size-4 text-zinc-600 transition-colors group-focus-within:text-zinc-400 z-10" />
+              <Input
                 type="password"
                 {...register("password")}
                 placeholder="••••••••"
-                className={`w-full bg-zinc-900/40 border rounded-xl py-3 pl-11 pr-4 text-sm text-zinc-200 placeholder-zinc-700 outline-none transition-all focus:bg-zinc-900/60 ${
-                  errors.password ? "border-red-500/40 focus:border-red-500/60" : "border-white/10 focus:border-white/30"
-                }`}
+                className={`h-10 rounded-xl bg-zinc-900/40 pl-11 pr-4 text-sm text-zinc-200 placeholder-zinc-700 transition-all focus:bg-zinc-900/60 ${errors.password
+                    ? "border-red-500/40 focus:border-red-500/60"
+                    : "border-white/10 focus:border-white/30"
+                  }`}
               />
             </div>
             {errors.password && (
@@ -126,11 +144,10 @@ export default function SigninForm() {
             )}
           </div>
 
-          {/* Submit button */}
-          <button
+          <Button
             type="submit"
             disabled={loading || !isValid}
-            className="w-full flex items-center justify-center gap-2 bg-white text-black py-3 rounded-xl text-sm font-medium hover:bg-zinc-200 transition-all active:scale-[0.98] disabled:bg-zinc-900 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed mt-4 shadow-lg shadow-white/5"
+            className="w-full h-11 rounded-xl bg-white text-black hover:bg-zinc-200 transition-all active:scale-[0.98] disabled:bg-zinc-900 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-white/5 font-medium mt-4"
           >
             {loading ? (
               <>
@@ -140,18 +157,20 @@ export default function SigninForm() {
             ) : (
               "Sign In"
             )}
-          </button>
+          </Button>
         </form>
 
-        {/* Footer link */}
-        <div className="text-center mt-8 pt-6 border-t border-white/5 text-xs text-zinc-500 font-sans">
-          Don't have an account?{" "}
-          <Link href="/signup" className="text-zinc-300 hover:text-white transition-colors underline font-medium">
+        <Separator className="bg-white/5" />
+        <p className="text-center text-xs text-zinc-500 font-sans">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="text-zinc-300 hover:text-white transition-colors underline font-medium"
+          >
             Sign up
           </Link>
-        </div>
-
-      </div>
-    </div>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
