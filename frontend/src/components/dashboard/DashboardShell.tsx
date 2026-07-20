@@ -6,7 +6,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderGit2, LogOut, User, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Plus, FolderGit2, LogOut, Trash2, User } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -17,15 +18,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const { token, user, logout } = useAuthStore();
   const { projects, fetchProjects, deleteProject, clearActiveProject } = useProjectStore();
 
-  useEffect(() => {    
-    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
+  useEffect(() => {
+    if (!token) {
       router.push("/signin");
       return;
     }
-    
-    if (token) {
-      fetchProjects();
-    }
+    fetchProjects();
   }, [token, fetchProjects, router]);
 
   const handleLogout = () => {
@@ -52,14 +50,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black text-zinc-100 font-sans selection:bg-white selection:text-black">
-      {/* Sidebar Panel */}
       <aside className="w-72 bg-zinc-950 border-r border-white/5 flex flex-col shrink-0 h-full relative z-20">
-        {/* Top Header */}
         <div className="p-5 border-b border-white/5 space-y-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={handleNewProject}>
-            <div className="size-8 rounded-lg bg-white text-black flex items-center justify-center font-bold">
-              L
-            </div>
+            <Avatar className="bg-white text-black font-bold">
+              <AvatarFallback>L</AvatarFallback>
+            </Avatar>
             <div>
               <span className="font-sans font-light tracking-tight text-zinc-200">Lobable</span>
               <span className="text-[10px] font-mono text-zinc-500 block -mt-1">v1.0</span>
@@ -68,14 +64,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           <Button
             onClick={handleNewProject}
-            className="w-full flex items-center justify-center gap-2 bg-zinc-900 border border-white/10 hover:bg-zinc-800 hover:border-white/20 text-zinc-200 py-5 rounded-xl text-xs font-mono transition-all cursor-pointer"
+            variant="outline"
+            className="w-full gap-2 bg-zinc-900 border-white/10 hover:bg-zinc-800 hover:border-white/20 text-zinc-200 py-5 rounded-xl text-xs font-mono cursor-pointer"
           >
             <Plus className="size-4" />
             NEW PROJECT
           </Button>
         </div>
 
-        {/* Previous Workspaces List */}
         <div className="flex-1 flex flex-col overflow-hidden py-4">
           <div className="px-5 mb-2 text-[10px] font-mono text-zinc-500 tracking-wider">
             PREVIOUS PROJECTS
@@ -105,13 +101,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       }`} />
                       <span className="truncate flex-1 text-left pr-6">{p.name}</span>
 
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={(e) => handleDelete(e, p.id)}
-                        className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-600 transition-all rounded cursor-pointer"
+                        className="absolute right-2 opacity-0 group-hover:opacity-100 hover:text-red-400 text-zinc-600 rounded cursor-pointer"
                         title="Delete Project"
                       >
                         <Trash2 className="size-3.5" />
-                      </button>
+                      </Button>
                     </Link>
                   );
                 })
@@ -120,13 +118,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </ScrollArea>
         </div>
 
-        {/* User Footer Profile Panel */}
         {user && (
           <div className="p-4 border-t border-white/5 bg-zinc-950/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="size-8 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
-                <User className="size-4 text-zinc-500" />
-              </div>
+              <Avatar className="bg-zinc-900 border border-white/5 text-zinc-500">
+                <AvatarFallback>
+                  <User className="size-4" />
+                </AvatarFallback>
+              </Avatar>
               <div className="overflow-hidden">
                 <span className="text-xs text-zinc-200 font-medium block truncate leading-none">
                   {user.name}
@@ -139,9 +138,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
             <Button
               onClick={handleLogout}
-              size="icon"
+              size="icon-sm"
               variant="ghost"
-              className="size-8 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/10 transition-all shrink-0 cursor-pointer"
+              className="rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-950/10 transition-all shrink-0 cursor-pointer"
             >
               <LogOut className="size-4" />
             </Button>
@@ -149,7 +148,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         )}
       </aside>
 
-      {/* Main Viewport Panel */}
       <main className="flex-1 flex overflow-hidden relative bg-black z-10">
         {children}
       </main>

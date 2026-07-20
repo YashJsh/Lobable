@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { hashPassword, comparePassword } from "../utils/password";
 import { generateToken } from "../utils/token";
+import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -107,6 +108,33 @@ router.post("/signin", async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error during login",
+    });
+  }
+});
+
+router.get("/me", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error: any) {
+    console.error("Auth me error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 });

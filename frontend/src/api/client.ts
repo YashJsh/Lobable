@@ -3,6 +3,25 @@ import { useAuthStore } from "../store/useAuthStore";
 
 const API_BASE_URL = "http://localhost:3001/v1/api";
 
+const AUTH_PATHS = ["/auth/signin", "/auth/signup", "/auth/me"];
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.status === 401 &&
+      !AUTH_PATHS.some((p) => error.config?.url?.includes(p))
+    ) {
+      const { logout } = useAuthStore.getState();
+      logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/signin";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const getAuthHeaders = (): Record<string, string> => {
   // Read token from Zustand store
   const token = useAuthStore.getState().token;

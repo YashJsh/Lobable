@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import { ArrowLeft, Loader2, Terminal, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { MessageItem, BuildStatus } from "./types";
 
 interface ChatPanelProps {
@@ -21,6 +23,22 @@ interface ChatPanelProps {
   onBack: () => void;
 }
 
+const statusBadgeVariant: Record<BuildStatus, "secondary" | "outline" | "default" | "destructive"> = {
+  idle: "outline",
+  running: "default",
+  waiting: "secondary",
+  completed: "outline",
+  error: "destructive",
+};
+
+const statusDotClass: Record<BuildStatus, string> = {
+  idle: "bg-zinc-800",
+  running: "bg-white animate-pulse",
+  waiting: "bg-zinc-300 animate-bounce",
+  completed: "bg-zinc-500",
+  error: "bg-zinc-500 border border-white",
+};
+
 export default function ChatPanel({
   status,
   messages,
@@ -36,7 +54,6 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom of chat whenever messages change
   useEffect(() => {
     if (scrollRef.current) {
       const scrollContainer = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]");
@@ -48,7 +65,6 @@ export default function ChatPanel({
 
   return (
     <div className="flex flex-col w-1/3 h-full border-r border-white/10 bg-[#050505] min-w-[350px] max-w-[550px] relative z-10">
-      {/* Sidebar Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-[#080808]">
         <div className="flex items-center gap-3">
           <Button
@@ -65,24 +81,15 @@ export default function ChatPanel({
           </div>
         </div>
 
-        {/* Pulsing state dot */}
-        <div className="flex items-center gap-2 border border-white/5 bg-black px-2.5 py-1 rounded-full text-xs font-mono">
-          <span
-            className={`size-2 rounded-full ${
-              status === "running" ? "bg-white animate-pulse" :
-              status === "waiting" ? "bg-zinc-300 animate-bounce" :
-              status === "completed" ? "bg-zinc-500" :
-              status === "error" ? "bg-zinc-500 border border-white" :
-              "bg-zinc-800"
-            }`}
-          />
-          <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-            {status}
-          </span>
-        </div>
+        <Badge
+          variant={statusBadgeVariant[status]}
+          className="gap-1.5 border-white/10 bg-black/60 text-zinc-400 font-mono text-[10px] uppercase tracking-wider"
+        >
+          <span className={`size-1.5 rounded-full ${statusDotClass[status]}`} />
+          {status}
+        </Badge>
       </div>
 
-      {/* Scrollable logs area */}
       <ScrollArea ref={scrollRef} className="flex-1 min-h-0 p-4">
         <div className="space-y-6 pb-8">
           {messages.map((msg, index) => {
@@ -116,14 +123,12 @@ export default function ChatPanel({
                   </div>
                 ) : (
                   <div className="max-w-[90%] space-y-3">
-                    {/* Regular text contents */}
                     {msg.content && (
                       <div className="border border-white/5 bg-zinc-950/40 text-zinc-300 px-4 py-3 rounded-2xl rounded-tl-sm text-sm font-light leading-relaxed">
                         {msg.content}
                       </div>
                     )}
 
-                    {/* Question dialog */}
                     {msg.question && !msg.answerSubmitted && (
                       <div className="w-full border border-white/20 bg-zinc-950 p-4 rounded-xl space-y-3 shadow-lg">
                         <p className="text-sm font-medium ">{msg.question}</p>
@@ -141,7 +146,11 @@ export default function ChatPanel({
                                 {opt}
                               </Button>
                             ))}
-                            <div className="text-[10px] text-zinc-600 font-mono text-center my-1.5">OR</div>
+                            <div className="flex items-center gap-2 my-1.5">
+                              <Separator className="flex-1 bg-white/5" />
+                              <span className="text-[10px] text-zinc-600 font-mono shrink-0">OR</span>
+                              <Separator className="flex-1 bg-white/5" />
+                            </div>
                           </div>
                         )}
 
@@ -174,7 +183,6 @@ export default function ChatPanel({
                       </div>
                     )}
 
-                    {/* Tool Executions Info */}
                     {msg.toolCalls &&
                       msg.toolCalls.map((tc) => (
                         <div
@@ -197,7 +205,6 @@ export default function ChatPanel({
         </div>
       </ScrollArea>
 
-      {/* Chat update input */}
       <form onSubmit={onUpdateSubmit} className="p-3 border-t border-white/10 bg-[#080808]">
         <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black p-1.5 focus-within:border-white/20 transition-colors">
           <Textarea
@@ -234,7 +241,6 @@ export default function ChatPanel({
         </div>
       </form>
 
-      {/* Sidebar Status Footer */}
       <div className="border-t border-white/10 px-4 py-3 bg-[#080808] flex items-center justify-between text-xs font-mono text-zinc-500">
         <span>Logs session active</span>
         {status === "running" && (
