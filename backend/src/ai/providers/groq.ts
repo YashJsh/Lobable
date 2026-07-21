@@ -40,13 +40,13 @@ class GroqProvider implements ModelProvider {
     return;
   }
 
-  async chat_impl(message: Message[], tools : ToolDefiniton[]) {
+  async chat_impl(message: Message[], tools: ToolDefiniton[]) {
     for (let i = 1; i <= this.maxRetries; i++) {
       try {
         return await this.chat_once(message, tools);
       } catch (error) {
-        console.log('OPEN AI ERROR :', error);
-        if (error instanceof Error) console.error(`[OpenAI]  └─ ${error.message}`);
+        console.log('GROQ ERROR :', error);
+        if (error instanceof Error) console.error(`${error.message}`);
       }
     }
   }
