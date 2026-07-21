@@ -7,10 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUp } from "lucide-react";
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useProjectStore } from "@/store/useProjectStore";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function PromptPage() {
   const [prompt, setPrompt] = useState("");
   const router = useRouter();
+  const provider = useProjectStore((state) => state.provider);
+  const setProvider = useProjectStore((state) => state.setProvider);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +70,21 @@ export default function PromptPage() {
               />
               
               <div className="flex items-center justify-between px-3 py-2 border-t border-white/5 mt-2">
-                <span className="text-[11px] text-zinc-600 font-mono">
-                  Press Enter to generate, Shift+Enter for new line
-                </span>
+                <div className="flex items-center gap-4">
+                  <Select value={provider} onValueChange={setProvider}>
+                    <SelectTrigger className="w-[160px] h-8 bg-transparent border-white/10 text-xs text-zinc-300">
+                      <SelectValue placeholder="Select Provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="openai">OpenAI (GPT-4o Mini)</SelectItem>
+                      <SelectItem value="groq">Groq (Llama 3)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-[11px] text-zinc-600 font-mono hidden sm:inline-block">
+                    Press Enter to generate, Shift+Enter for new line
+                  </span>
+                </div>
                 <Button
                   type="submit"
                   disabled={!prompt.trim()}

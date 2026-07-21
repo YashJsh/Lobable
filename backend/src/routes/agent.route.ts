@@ -9,6 +9,7 @@ import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 import { getSandbox, createSandbox } from "../utils/e2b";
 import { saveData } from "../utils/conversation";
 import { GroqProvider } from "../ai/providers/groq";
+import { GeminiProvider } from "../ai/providers/gemini";
 import { createProject, saveMessage } from "../utils/db";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
@@ -57,15 +58,15 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   await saveMessage(projectId, "USER", body.prompt);
   console.log("Saved message Successfully");
 
-  const modelName = body.model;
+  const reqProvider = body.provider || "gemini";
   let provider;
-  if (body.provider === "openai" || (modelName && (modelName.toLowerCase().includes("gpt") || modelName.toLowerCase().includes("openai")))) {
-    provider = new OpenAIProvider(1, modelName || "gpt-4o-mini");
+  if (reqProvider === "openai") {
+    provider = new OpenAIProvider(1, "gpt-4o-mini");
+  } else if (reqProvider === "groq") {
+    provider = new GroqProvider(1, "openai/gpt-oss-120b");
   } else {
-    provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
+    provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
   }
-  //For testing it is here.
-  provider = new OpenAIProvider(1, modelName || "gpt-4o-mini"); 
   
   const harness = new Harness(
     provider,
@@ -128,12 +129,14 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).send("Project not found in database");
     }
 
-    const modelName = body.model;
+    const reqProvider = body.provider || "gemini";
     let provider;
-    if (body.provider === "openai" || (modelName && (modelName.toLowerCase().includes("gpt") || modelName.toLowerCase().includes("openai")))) {
-      provider = new OpenAIProvider(1, modelName || "gpt-4o-mini");
+    if (reqProvider === "openai") {
+      provider = new OpenAIProvider(1, "gpt-4o-mini");
+    } else if (reqProvider === "groq") {
+      provider = new GroqProvider(1, "openai/gpt-oss-120b");
     } else {
-      provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
+      provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
     }
 
     harness = new Harness(

@@ -35,7 +35,7 @@ class GeminiProvider implements ModelProvider {
 
     for (const part of candidate.content.parts || []) {
       if (part.text) {
-        textContent = (textContent || "") + part;
+        textContent = (textContent || "") + part.text;
       }
       else if (part.functionCall) {
         toolCalls.push({
@@ -43,7 +43,7 @@ class GeminiProvider implements ModelProvider {
           type: "function",
           function: {
             name: part.functionCall.name || "",
-            arguments: JSON.stringify(part.functionCall.args) || "{}"
+            arguments: JSON.stringify(part.functionCall.args || {})
           }
         })
       }
@@ -114,19 +114,20 @@ class GeminiProvider implements ModelProvider {
         if (msg.content) {
           parts.push({
             text: msg.content
-          })
+          });
+        }
 
-          if (msg.tool_calls && msg.tool_calls.length > 0) {
-            for (const tc of msg.tool_calls) {
-              parts.push({
-                functionCall: {
-                  name: tc.function.name,
-                  args: JSON.parse(tc.function.arguments)
-                }
-              });
-            }
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+          for (const tc of msg.tool_calls) {
+            parts.push({
+              functionCall: {
+                name: tc.function.name,
+                args: JSON.parse(tc.function.arguments)
+              }
+            });
           }
         }
+        
         contents.push({
           role: "model",
           parts

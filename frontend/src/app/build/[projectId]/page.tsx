@@ -97,6 +97,7 @@ function BuildContent() {
     await streamAgentUpdate(
       currentPrompt,
       projectId,
+      useProjectStore.getState().provider,
       (msg) => {
         setMessages((prev) => [
           ...prev,
@@ -218,6 +219,7 @@ function BuildContent() {
     await streamAgentCreate(
       prompt,
       projectId,
+      useProjectStore.getState().provider,
       (msg) => {
         setMessages((prev) => [
           ...prev,
