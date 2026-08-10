@@ -73,6 +73,7 @@ export interface AgentResponse {
 export const streamAgentCreate = async (
   prompt: string,
   projectId: string,
+  provider: string,
   onMessage: (msg: AgentResponse) => void,
   onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
   onClose: () => void,
@@ -85,7 +86,7 @@ export const streamAgentCreate = async (
         "Content-Type": "application/json",
         ...getAuthHeaders(),
       },
-      body: JSON.stringify({ prompt, projectId }),
+      body: JSON.stringify({ prompt, projectId, provider }),
     });
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -147,6 +148,7 @@ export const streamAgentCreate = async (
 export const streamAgentUpdate = async (
   prompt: string,
   projectId: string,
+  provider: string,
   onMessage: (msg: AgentResponse) => void,
   onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
   onClose: () => void,
@@ -159,7 +161,7 @@ export const streamAgentUpdate = async (
         "Content-Type": "application/json",
         ...getAuthHeaders(),
       },
-      body: JSON.stringify({ prompt, projectId }),
+      body: JSON.stringify({ prompt, projectId, provider }),
     });
 
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);

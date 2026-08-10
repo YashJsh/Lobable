@@ -13,7 +13,6 @@ class Harness {
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
   private onEvent?: (event: string) => void;
-  private tokens;
   private sandboxId?: string;
 
   constructor(
@@ -34,7 +33,6 @@ class Harness {
     ];
     this.toolImplementation = toolImplementation;
     this.onEvent = onEvent;
-    this.tokens = 0;
     this.sandboxId = sandboxId;
   }
 

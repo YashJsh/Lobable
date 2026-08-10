@@ -10,6 +10,7 @@ interface ProjectState {
   sandboxUrl: string | null;
   answers: Record<string, string>;
   submittingAnswerId: string | null;
+  provider: string;
   
   setProjects: (projects: Project[]) => void;
   setActiveProject: (project: ProjectDetails | null) => void;
@@ -19,6 +20,7 @@ interface ProjectState {
   setSandboxUrl: (url: string | null) => void;
   setAnswers: (answers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   setSubmittingAnswerId: (id: string | null) => void;
+  setProvider: (provider: string) => void;
 
   fetchProjects: () => Promise<void>;
   fetchProjectDetails: (projectId: string) => Promise<void>;
@@ -34,6 +36,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   sandboxUrl: null,
   answers: {},
   submittingAnswerId: null,
+  provider: "gemini",
 
   setProjects: (projects) => set({ projects }),
   setActiveProject: (activeProject) => set({ activeProject }),
@@ -51,6 +54,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     answers: typeof update === "function" ? update(state.answers) : update
   })),
   setSubmittingAnswerId: (submittingAnswerId) => set({ submittingAnswerId }),
+  setProvider: (provider) => set({ provider }),
 
   fetchProjects: async () => {
     try {

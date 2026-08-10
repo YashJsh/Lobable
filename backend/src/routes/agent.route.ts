@@ -9,6 +9,7 @@ import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 import { getSandbox, createSandbox } from "../utils/e2b";
 import { saveData } from "../utils/conversation";
 import { GroqProvider } from "../ai/providers/groq";
+import { GeminiProvider } from "../ai/providers/gemini";
 import { createProject, saveMessage } from "../utils/db";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
@@ -16,7 +17,6 @@ import { getProjectName } from "../utils/namingAgent";
 
 const router = Router();
 
-export const clientMap = new Map<string, Response>();
 export const harnessMap = new Map<string, Harness>();
 
 router.post("/create", authMiddleware, async (req: Request, res: Response) => {
@@ -31,13 +31,11 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  clientMap.set(projectId, res);
-
   const userId = req.userId!;
+
   console.log("Calling sandbox first time");
   const sandboxInstance = await createSandbox();
   const sandboxId = sandboxInstance.sandboxId;
-  console.log("SANDBOX ID FIRST TIME : ", sandboxId);
 
   const projectName = await getProjectName(body.prompt);
   
@@ -57,15 +55,15 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   await saveMessage(projectId, "USER", body.prompt);
   console.log("Saved message Successfully");
 
-  const modelName = body.model;
+  const reqProvider = body.provider || "gemini";
   let provider;
-  if (body.provider === "openai" || (modelName && (modelName.toLowerCase().includes("gpt") || modelName.toLowerCase().includes("openai")))) {
-    provider = new OpenAIProvider(1, modelName || "gpt-4o-mini");
+  if (reqProvider === "openai") {
+    provider = new OpenAIProvider(1, "gpt-4o-mini");
+  } else if (reqProvider === "groq") {
+    provider = new GroqProvider(1, "openai/gpt-oss-120b");
   } else {
-    provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
+    provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
   }
-  //For testing it is here.
-  provider = new OpenAIProvider(1, modelName || "gpt-4o-mini"); 
   
   const harness = new Harness(
     provider,
@@ -73,14 +71,11 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
     mainAgentTools,
     MAIN_AGENT_SYSTEM_PROMPT,
     (event) => {
-      const client = clientMap.get(projectId);
-      if (client) {
         if (typeof event === "string" && event.startsWith("data:")) {
-          client.write(event);
+          res.write(event);
         } else {
-          client.write(`data: ${event}\n\n`);
+          res.write(`data: ${event}\n\n`);
         }
-      }
     },
     sandboxId
   );
@@ -110,8 +105,6 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  clientMap.set(projectId, res);
-
   let harness = harnessMap.get(projectId);
   let sandboxId: string | undefined;
 
@@ -128,12 +121,14 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).send("Project not found in database");
     }
 
-    const modelName = body.model;
+    const reqProvider = body.provider || "gemini";
     let provider;
-    if (body.provider === "openai" || (modelName && (modelName.toLowerCase().includes("gpt") || modelName.toLowerCase().includes("openai")))) {
-      provider = new OpenAIProvider(1, modelName || "gpt-4o-mini");
+    if (reqProvider === "openai") {
+      provider = new OpenAIProvider(1, "gpt-4o-mini");
+    } else if (reqProvider === "groq") {
+      provider = new GroqProvider(1, "openai/gpt-oss-120b");
     } else {
-      provider = new GroqProvider(1, modelName || "openai/gpt-oss-120b");
+      provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
     }
 
     harness = new Harness(
@@ -142,14 +137,11 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
       mainAgentTools,
       MAIN_AGENT_SYSTEM_PROMPT,
       (event) => {
-        const client = clientMap.get(projectId);
-        if (client) {
           if (typeof event === "string" && event.startsWith("data:")) {
-            client.write(event);
+            res.write(event);
           } else {
-            client.write(`data: ${event}\n\n`);
+            res.write(`data: ${event}\n\n`);
           }
-        }
       },
       sandboxId
     );
