@@ -11,6 +11,7 @@ interface ProjectState {
   answers: Record<string, string>;
   submittingAnswerId: string | null;
   provider: string;
+  error: string | null;
   
   setProjects: (projects: Project[]) => void;
   setActiveProject: (project: ProjectDetails | null) => void;
@@ -21,6 +22,7 @@ interface ProjectState {
   setAnswers: (answers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   setSubmittingAnswerId: (id: string | null) => void;
   setProvider: (provider: string) => void;
+  setError: (error: string | null) => void;
 
   fetchProjects: () => Promise<void>;
   fetchProjectDetails: (projectId: string) => Promise<boolean>;
@@ -37,6 +39,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   answers: {},
   submittingAnswerId: null,
   provider: "deepseek",
+  error: null,
 
   setProjects: (projects) => set({ projects }),
   setActiveProject: (activeProject) => set({ activeProject }),
@@ -55,15 +58,17 @@ export const useProjectStore = create<ProjectState>((set) => ({
   })),
   setSubmittingAnswerId: (submittingAnswerId) => set({ submittingAnswerId }),
   setProvider: (provider) => set({ provider }),
+  setError: (error) => set({ error }),
 
   fetchProjects: async () => {
     try {
       const res = await getUserProjects();
       if (res.success) {
-        set({ projects: res.data });
+        set({ projects: res.data, error: null });
       }
     } catch (err) {
       console.error("Failed to fetch user projects:", err);
+      set({ error: "Failed to load projects. Please retry." });
     }
   },
 
@@ -123,10 +128,12 @@ export const useProjectStore = create<ProjectState>((set) => ({
           messages: state.activeProject?.id === projectId ? [] : state.messages,
           sandboxUrl: state.activeProject?.id === projectId ? null : state.sandboxUrl,
           status: state.activeProject?.id === projectId ? "idle" : state.status,
+          error: null,
         }));
       }
     } catch (err) {
       console.error(`Failed to delete project ${projectId}:`, err);
+      set({ error: "Failed to delete project. Please retry." });
     }
   },
 

@@ -16,7 +16,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const projectId = params?.projectId as string | undefined;
 
   const { token, user, logout, authReady } = useAuthStore();
-  const { projects, fetchProjects, deleteProject, clearActiveProject } = useProjectStore();
+  const { projects, fetchProjects, deleteProject, clearActiveProject, error, setError } = useProjectStore();
 
   useEffect(() => {
     if (!authReady) return;
@@ -72,6 +72,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             NEW PROJECT
           </Button>
         </div>
+
+        {error && (
+          <div className="mx-4 mb-1 flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-950/10 px-3 py-2 text-[11px] font-mono text-red-400">
+            <span className="flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400/70 hover:text-red-300 cursor-pointer"
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col overflow-hidden py-4">
           <div className="px-5 mb-2 text-[10px] font-mono text-zinc-500 tracking-wider">
