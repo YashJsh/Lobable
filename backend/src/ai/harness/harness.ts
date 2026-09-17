@@ -5,14 +5,12 @@ import type {
   ToolImplementation,
 } from "./harness.types";
 import { returnedAssistantMessage, userMessage } from "../utils";
-import { saveData } from "../../utils/conversation";
 
 class Harness {
   private provider: ModelProvider;
   private transcript: Message[];
   private toolDefinition: ToolDefiniton[];
   private toolImplementation: ToolImplementation[];
-  private onEvent?: (event: string) => void;
   private sandboxId?: string;
   private providerName?: string;
 
@@ -21,7 +19,6 @@ class Harness {
     toolDefinition: ToolDefiniton[],
     toolImplementation: ToolImplementation[],
     prompt: string,
-    onEvent?: (event: string) => void,
     sandboxId?: string,
     providerName?: string
   ) {
@@ -34,14 +31,11 @@ class Harness {
       },
     ];
     this.toolImplementation = toolImplementation;
-    this.onEvent = onEvent;
     this.sandboxId = sandboxId;
     this.providerName = providerName;
   }
 
-  public async sendMessage(input: string) {
-    saveData(this.transcript);
-    saveData(userMessage(input));
+  public async sendMessage(input: string, onEvent?: (event: string) => void) {
     this.transcript.push(userMessage(input));
 
     const startTime = Date.now();
@@ -59,9 +53,8 @@ class Harness {
         throw new Error("No response from the model provider");
       }
 
-      if (this.onEvent) {
-        saveData(result);
-        this.onEvent(JSON.stringify(result));
+      if (onEvent) {
+        onEvent(JSON.stringify(result));
       }
 
       this.transcript.push(returnedAssistantMessage(result.content, result.tool_call));
@@ -95,7 +88,7 @@ class Harness {
             try {
               const toolOutput = await match.implementation(
                 JSON.parse(tool.function.arguments),
-                { emit: this.onEvent, workspaceRoot: "/home/user/next-app", sandboxId: this.sandboxId, provider: this.providerName }
+                { emit: onEvent, workspaceRoot: "/home/user/next-app", sandboxId: this.sandboxId, provider: this.providerName }
               );
               return {
                 role: "tool" as const,

@@ -77,3 +77,11 @@ cd frontend
 bun run dev
 ```
 Navigate to `http://localhost:3000` to start creating workspaces.
+
+---
+
+## Known Limitations
+
+- Agent conversation state is held in memory per backend process. After a server restart (or when running multiple backend instances), a project's next update starts with a fresh agent context. Sandbox files persist, and the agent re-inspects the workspace as needed.
+- Deleting a project tears down its E2B sandbox and evicts its in-memory agent state.
+

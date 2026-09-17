@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { killSandbox } from "../utils/e2b";
+import { evictHarness } from "../utils/harnessRegistry";
 
 const router = Router();
 
@@ -107,6 +108,9 @@ router.delete("/:id", authMiddleware, async (req: Request, res: Response) => {
         error
       );
     }
+
+    // Drop the in-memory harness so its transcript isn't retained.
+    evictHarness(projectId);
 
     return res.status(200).json({
       success: true,

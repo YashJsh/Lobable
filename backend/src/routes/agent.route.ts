@@ -8,15 +8,21 @@ import { mainAgentTools } from "../ai/tools/toolImplementation";
 import { IGNORE } from "../ai/tools/fileTools";
 import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 import { getSandbox, createSandbox } from "../utils/e2b";
-import { saveData } from "../utils/conversation";
 import { createProject, saveMessage } from "../utils/db";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { getProjectName } from "../utils/namingAgent";
+import { getHarness, setHarness } from "../utils/harnessRegistry";
 
 const router = Router();
 
-export const harnessMap = new Map<string, Harness>();
+const emitTo = (res: Response) => (event: string) => {
+  if (typeof event === "string" && event.startsWith("data:")) {
+    res.write(event);
+  } else {
+    res.write(`data: ${event}\n\n`);
+  }
+};
 
 const finishStream = (res: Response) => {
   if (!res.writableEnded) {
@@ -64,12 +70,6 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
       sandboxId
     );
 
-    saveData({
-      username: userId,
-      projectId: body.projectId,
-      createdAt: Date.now().toString()
-    });
-
     await saveMessage(projectId, "USER", body.prompt);
     console.log("Saved message Successfully");
 
@@ -80,22 +80,15 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
       toolsDefinition,
       mainAgentTools,
       MAIN_AGENT_SYSTEM_PROMPT,
-      (event) => {
-        if (typeof event === "string" && event.startsWith("data:")) {
-          res.write(event);
-        } else {
-          res.write(`data: ${event}\n\n`);
-        }
-      },
       sandboxId,
       body.provider
     );
 
-    harnessMap.set(projectId, harness);
+    setHarness(projectId, harness);
 
     console.log("Sending to harness");
 
-    const response = await harness.sendMessage(body.prompt);
+    const response = await harness.sendMessage(body.prompt, emitTo(res));
     if (response) {
       await saveMessage(projectId, "ASSISTANT", response);
     }
@@ -128,7 +121,7 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
     }
 
     const sandboxId = project.sandboxId;
-    let harness = harnessMap.get(projectId);
+    let harness = getHarness(projectId);
 
     if (!harness) {
       const provider = createProvider(body.provider, body.model);
@@ -138,22 +131,15 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
         toolsDefinition,
         mainAgentTools,
         MAIN_AGENT_SYSTEM_PROMPT,
-        (event) => {
-          if (typeof event === "string" && event.startsWith("data:")) {
-            res.write(event);
-          } else {
-            res.write(`data: ${event}\n\n`);
-          }
-        },
         sandboxId,
         body.provider
       );
-      harnessMap.set(projectId, harness);
+      setHarness(projectId, harness);
     }
 
     await saveMessage(projectId, "USER", body.prompt);
 
-    const response = await harness.sendMessage(body.prompt);
+    const response = await harness.sendMessage(body.prompt, emitTo(res));
 
     if (response) {
       await saveMessage(projectId, "ASSISTANT", response);

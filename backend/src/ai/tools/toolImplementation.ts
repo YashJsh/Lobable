@@ -30,11 +30,10 @@ const spwaningSubAgent = async (
       subAgentToolDefinition,
       subAgentToolsImplementation,
       SUB_AGENT_SYSTEM_PROMPT.concat(`\nWORKSPACE_ROOT = ${options?.workspaceRoot || "/home/user/next-app"}`),
-      options?.emit,
       options?.sandboxId,
       options?.provider
     );
-    const result = await harness.sendMessage(`\n${task}\n${description}`);
+    const result = await harness.sendMessage(`\n${task}\n${description}`, options?.emit);
     return result || "";
   } catch (error: any) {
     return error as string;
