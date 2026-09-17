@@ -36,6 +36,7 @@ function BuildContent() {
   } = useProjectStore();
 
   const [updatePrompt, setUpdatePrompt] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const buildStarted = useRef(false);
   const sandboxUrlRef = useRef<string | null>(null);
 
@@ -82,9 +83,15 @@ function BuildContent() {
 
   // 2. Fetch initial prompt from search params or session storage
   useEffect(() => {
-    const queryPrompt = searchParams.get("prompt");
-    const storedPrompt = sessionStorage.getItem(`prompt-${projectId}`);
-    setPrompt(storedPrompt || queryPrompt);
+    let cancelled = false;
+    (async () => {
+      const queryPrompt = searchParams.get("prompt");
+      const storedPrompt = sessionStorage.getItem(`prompt-${projectId}`);
+      if (!cancelled) setPrompt(storedPrompt || queryPrompt);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, searchParams]);
 
   useEffect(() => {
@@ -184,6 +191,7 @@ function BuildContent() {
             timestamp: new Date(),
           },
         ]);
+        setRefreshKey((key) => key + 1);
         reloadIframe();
       },
       (err) => {
@@ -297,6 +305,7 @@ function BuildContent() {
             timestamp: new Date(),
           },
         ]);
+        setRefreshKey((key) => key + 1);
         reloadIframe();
       },
       (err) => {
@@ -397,6 +406,7 @@ function BuildContent() {
           sandboxUrl={sandboxUrl}
           status={status}
           onReload={reloadIframe}
+          refreshKey={refreshKey}
         />
       </div>
     </DashboardShell>

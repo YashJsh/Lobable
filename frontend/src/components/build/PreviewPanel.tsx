@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import type { BeforeMount } from "@monaco-editor/react";
 import {
   RefreshCw, ExternalLink, Copy, Check, Terminal,
   Monitor, Code, FileCode, Folder, Loader2,
@@ -12,17 +14,86 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAllFiles, getFileContent } from "@/api/client";
 import { BuildStatus } from "./types";
 
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex flex-col items-center justify-center gap-2 bg-[#020202] text-xs font-mono text-zinc-600">
+      <Loader2 className="size-4 animate-spin" />
+      Loading editor...
+    </div>
+  ),
+});
+
+interface SandboxFile {
+  path: string;
+  type?: string;
+}
+
 interface PreviewPanelProps {
   projectId: string;
   sandboxUrl: string | null;
   status: BuildStatus;
   onReload: () => void;
+  refreshKey?: number;
 }
 
-export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }: PreviewPanelProps) {
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  ts: "typescript",
+  tsx: "typescript",
+  js: "javascript",
+  jsx: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  json: "json",
+  css: "css",
+  scss: "scss",
+  less: "less",
+  html: "html",
+  md: "markdown",
+  mdx: "markdown",
+  yml: "yaml",
+  yaml: "yaml",
+  py: "python",
+  sh: "shell",
+  bash: "shell",
+  sql: "sql",
+  go: "go",
+  rs: "rust",
+  java: "java",
+  svg: "xml",
+};
+
+const getLanguage = (filePath: string): string => {
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  return LANGUAGE_BY_EXTENSION[ext] ?? "plaintext";
+};
+
+const relativePath = (filePath: string): string =>
+  filePath
+    .replace("/home/user/next-app/", "")
+    .replace("/home/user/react-app/", "");
+
+const defineTheme: BeforeMount = (monaco) => {
+  monaco.editor.defineTheme("lobable-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#020202",
+    },
+  });
+};
+
+export default function PreviewPanel({
+  projectId,
+  sandboxUrl,
+  status,
+  onReload,
+  refreshKey = 0,
+}: PreviewPanelProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"preview" | "code">("preview");
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<SandboxFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
@@ -37,53 +108,57 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Refresh the file tree when the Code tab opens and whenever the workspace
+  // changes (an update bumps refreshKey).
   useEffect(() => {
-    if (activeTab === "code" && isCompleted && files.length === 0) {
-      fetchFiles();
-    }
-  }, [activeTab, isCompleted]);
+    if (activeTab !== "code" || !isCompleted) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingFiles(true);
+      try {
+        const res = await getAllFiles(projectId);
+        if (!cancelled && res.success && res.data) {
+          setFiles(res.data.filter((f: SandboxFile) => f.type !== "dir"));
+        }
+      } catch (err) {
+        console.error("Error fetching files:", err);
+      } finally {
+        if (!cancelled) setLoadingFiles(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isCompleted, refreshKey, projectId]);
 
+  // (Re)load the selected file's content on selection or workspace change.
   useEffect(() => {
-    if (!isCompleted) {
-      setActiveTab("preview");
-      setFiles([]);
-      setSelectedFile(null);
+    if (!isCompleted || !selectedFile) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingContent(true);
       setFileContent(null);
-    }
-  }, [isCompleted]);
-
-  const fetchFiles = async () => {
-    setLoadingFiles(true);
-    try {
-      const res = await getAllFiles(projectId);
-      if (res.success && res.data) {
-        setFiles(res.data.filter((f: any) => f.type !== "dir"));
+      try {
+        const res = await getFileContent(projectId, selectedFile);
+        if (!cancelled && res.success && res.data !== undefined) {
+          setFileContent(res.data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Error loading file content:", err);
+          setFileContent("// Failed to load file content.");
+        }
+      } finally {
+        if (!cancelled) setLoadingContent(false);
       }
-    } catch (err) {
-      console.error("Error fetching files:", err);
-    } finally {
-      setLoadingFiles(false);
-    }
-  };
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFile, refreshKey, isCompleted, projectId]);
 
-  const handleFileSelect = async (filePath: string) => {
-    if (selectedFile === filePath) return;
+  const handleFileSelect = (filePath: string) => {
     setSelectedFile(filePath);
-    setLoadingContent(true);
-    setFileContent(null);
-    try {
-      const res = await getFileContent(projectId, filePath);
-      if (res.success && res.data !== undefined) {
-        setFileContent(res.data);
-      } else if (res.sucess && res.data !== undefined) {
-        setFileContent(res.data);
-      }
-    } catch (err) {
-      console.error("Error loading file content:", err);
-      setFileContent("// Failed to load file content.");
-    } finally {
-      setLoadingContent(false);
-    }
   };
 
   if (!isCompleted) {
@@ -241,9 +316,6 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
                     </div>
                   ) : (
                     files.map((file) => {
-                      const relativePath = file.path
-                        .replace("/home/user/next-app/", "")
-                        .replace("/home/user/react-app/", "");
                       const isSelected = selectedFile === file.path;
                       return (
                         <Button
@@ -257,7 +329,7 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
                           }`}
                         >
                           <FileCode className={`size-3.5 shrink-0 ${isSelected ? "text-black" : "text-zinc-500"}`} />
-                          <span className="truncate">{relativePath}</span>
+                          <span className="truncate">{relativePath(file.path)}</span>
                         </Button>
                       );
                     })
@@ -266,44 +338,47 @@ export default function PreviewPanel({ projectId, sandboxUrl, status, onReload }
               </ScrollArea>
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 bg-[#030303]">
+            <div className="flex-1 flex flex-col min-h-0 bg-[#020202]">
               {selectedFile ? (
                 <>
                   <div className="p-3 border-b border-white/10 bg-black/40 text-xs font-mono text-zinc-500 flex items-center justify-between shrink-0">
-                    <span className="truncate">
-                      {selectedFile
-                        .replace("/home/user/next-app/", "")
-                        .replace("/home/user/react-app/", "")}
-                    </span>
+                    <span className="truncate">{relativePath(selectedFile)}</span>
                     {loadingContent && <Loader2 className="size-3.5 animate-spin text-zinc-400" />}
                   </div>
-                  <ScrollArea className="flex-1 min-h-0 bg-[#020202]">
-                    <div className="py-4">
-                      {loadingContent ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-zinc-600 text-xs font-mono gap-2">
-                          <Loader2 className="size-4 animate-spin" />
-                          Loading...
-                        </div>
-                      ) : fileContent !== null ? (
-                        fileContent.trim() === "" ? (
-                          <div className="text-zinc-600 text-xs font-mono p-4 text-center">Empty file</div>
-                        ) : (
-                          <div className="select-text">
-                            {fileContent.split("\n").map((line, idx) => (
-                              <div key={idx} className="flex hover:bg-zinc-900/40 px-4 py-0.5 leading-relaxed group">
-                                <span className="w-8 text-zinc-600 font-mono text-[10px] select-none text-right pr-4 shrink-0 border-r border-white/5 mr-4 group-hover:text-zinc-400">
-                                  {idx + 1}
-                                </span>
-                                <span className="text-zinc-300 font-mono text-xs whitespace-pre select-text">
-                                  {line}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      ) : null}
-                    </div>
-                  </ScrollArea>
+                  <div className="flex-1 min-h-0">
+                    {loadingContent ? (
+                      <div className="flex flex-col items-center justify-center h-full text-zinc-600 text-xs font-mono gap-2">
+                        <Loader2 className="size-4 animate-spin" />
+                        Loading...
+                      </div>
+                    ) : fileContent !== null ? (
+                      fileContent.trim() === "" ? (
+                        <div className="text-zinc-600 text-xs font-mono p-4 text-center">Empty file</div>
+                      ) : (
+                        <MonacoEditor
+                          height="100%"
+                          theme="lobable-dark"
+                          beforeMount={defineTheme}
+                          language={getLanguage(selectedFile)}
+                          value={fileContent}
+                          options={{
+                            readOnly: true,
+                            domReadOnly: true,
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            wordWrap: "on",
+                            fontSize: 12,
+                            fontFamily: "var(--font-geist-mono), monospace",
+                            lineNumbersMinChars: 3,
+                            renderLineHighlight: "none",
+                            automaticLayout: true,
+                            padding: { top: 12, bottom: 12 },
+                            scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
+                          }}
+                        />
+                      )
+                    ) : null}
+                  </div>
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-600 bg-[#020202]">
