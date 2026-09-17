@@ -90,7 +90,6 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   }
 
   console.log(`[Route] POST /create | complete`);
-  res.write(`data: ${JSON.stringify(response)}\n\n`);
   res.end();
 });
 
@@ -157,7 +156,6 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   }
 
   console.log(`[Route] POST /update | complete`);
-  res.write(`data: ${JSON.stringify(response)}\n\n`);
   res.end();
 });
 
