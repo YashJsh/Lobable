@@ -34,6 +34,9 @@ const writeStreamError = (res: Response, message: string) => {
   }
 };
 
+const getOwnedProject = (projectId: string, userId: string) =>
+  prisma.project.findFirst({ where: { id: projectId, userId } });
+
 router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   console.log("****Request Recieved****");
   const body = req.body;
@@ -126,23 +129,16 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  let harness = harnessMap.get(projectId);
-  let sandboxId: string | undefined;
-
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
-
-    if (project) {
-      sandboxId = project.sandboxId;
+    const project = await getOwnedProject(projectId, req.userId!);
+    if (!project) {
+      return res.status(404).send("Project not found in database");
     }
 
-    if (!harness) {
-      if (!project) {
-        return res.status(404).send("Project not found in database");
-      }
+    const sandboxId = project.sandboxId;
+    let harness = harnessMap.get(projectId);
 
+    if (!harness) {
       const reqProvider = body.provider || "gemini";
       let provider;
       if (reqProvider === "openai") {
@@ -188,7 +184,7 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/answer", async (req: Request, res: Response) => {
+router.post("/answer", authMiddleware, async (req: Request, res: Response) => {
   const { correlationId, answer } = req.body;
   if (!correlationId || !answer) {
     return res.status(403).json({
@@ -203,15 +199,13 @@ router.post("/answer", async (req: Request, res: Response) => {
   })
 });
 
-router.get("/sandbox-url", async (req: Request, res: Response) => {
+router.get("/sandbox-url", authMiddleware, async (req: Request, res: Response) => {
   try {
     const projectId = req.query.projectId as string;
     if (!projectId) {
       return res.status(400).json({ success: false, message: "projectId is required" });
     }
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await getOwnedProject(projectId, req.userId!);
     if (!project) {
       return res.status(404).json({ success: false, message: "Project not found" });
     }
@@ -230,15 +224,13 @@ router.get("/sandbox-url", async (req: Request, res: Response) => {
 });
 
 
-router.get("/get_all_files", async (req: Request, res: Response) => {
+router.get("/get_all_files", authMiddleware, async (req: Request, res: Response) => {
   try {
     const projectId = req.query.projectId as string;
     if (!projectId) {
       return res.status(400).json({ success: false, message: "projectId query param is required" });
     }
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await getOwnedProject(projectId, req.userId!);
     if (!project) {
       return res.status(404).json({ success: false, message: "Project not found in database" });
     }
@@ -259,7 +251,7 @@ router.get("/get_all_files", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/get_file", async (req: Request, res: Response) => {
+router.get("/get_file", authMiddleware, async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string;
     const projectId = req.query.projectId as string;
@@ -269,9 +261,7 @@ router.get("/get_file", async (req: Request, res: Response) => {
         message: "path and projectId query params are required"
       });
     }
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await getOwnedProject(projectId, req.userId!);
     if (!project) {
       return res.status(404).json({ success: false, message: "Project not found in database" });
     }
