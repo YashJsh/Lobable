@@ -70,6 +70,15 @@ export interface AgentResponse {
   }>;
 }
 
+interface StreamFrame extends AgentResponse {
+  error?: boolean;
+  message?: string;
+  correlationId?: string;
+  question?: string;
+  suggestions?: string[];
+  options?: string[];
+}
+
 export const streamAgentCreate = async (
   prompt: string,
   projectId: string,
@@ -102,7 +111,6 @@ export const streamAgentCreate = async (
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      console.log("RAW BUFFER:", buffer);
       const parts = buffer.split("\n\n");
       buffer = parts.pop() || "";
 
@@ -119,27 +127,28 @@ export const streamAgentCreate = async (
           }
         }
 
-        console.log("+++++++++++++++++++");
-        console.log("Data str is : ", JSON.parse(dataStr));
-        if (dataStr) {
-          try {
-            const parsed = JSON.parse(dataStr);
-            if (parsed && parsed.error) {
-              onError(new Error(parsed.message || "Agent execution failed"));
-              return;
-            }
-            if (parsed.correlationId && parsed.question) {
-              onQuestion({
-                correlationId: parsed.correlationId,
-                question: parsed.question,
-                options: parsed.suggestions || parsed.options,
-              });
-            } else {
-              onMessage(parsed);
-            }
-          } catch (e) {
-            onMessage({ role: "assistant", content: dataStr });
-          }
+        if (!dataStr) continue;
+
+        let parsed: StreamFrame;
+        try {
+          parsed = JSON.parse(dataStr) as StreamFrame;
+        } catch {
+          console.warn("Skipping malformed SSE frame:", dataStr);
+          continue;
+        }
+
+        if (parsed.error) {
+          onError(new Error(parsed.message || "Agent execution failed"));
+          return;
+        }
+        if (parsed.correlationId && parsed.question) {
+          onQuestion({
+            correlationId: parsed.correlationId,
+            question: parsed.question,
+            options: parsed.suggestions || parsed.options,
+          });
+        } else {
+          onMessage(parsed);
         }
       }
     }
@@ -197,27 +206,28 @@ export const streamAgentUpdate = async (
           }
         }
 
-        console.log("+++++++++++++++++++");
-        console.log("Data str is : ", JSON.parse(dataStr));
-        if (dataStr) {
-          try {
-            const parsed = JSON.parse(dataStr);
-            if (parsed && parsed.error) {
-              onError(new Error(parsed.message || "Agent execution failed"));
-              return;
-            }
-            if (parsed.correlationId && parsed.question) {
-              onQuestion({
-                correlationId: parsed.correlationId,
-                question: parsed.question,
-                options: parsed.suggestions || parsed.options,
-              });
-            } else {
-              onMessage(parsed);
-            }
-          } catch (e) {
-            onMessage({ role: "assistant", content: dataStr });
-          }
+        if (!dataStr) continue;
+
+        let parsed: StreamFrame;
+        try {
+          parsed = JSON.parse(dataStr) as StreamFrame;
+        } catch {
+          console.warn("Skipping malformed SSE frame:", dataStr);
+          continue;
+        }
+
+        if (parsed.error) {
+          onError(new Error(parsed.message || "Agent execution failed"));
+          return;
+        }
+        if (parsed.correlationId && parsed.question) {
+          onQuestion({
+            correlationId: parsed.correlationId,
+            question: parsed.question,
+            options: parsed.suggestions || parsed.options,
+          });
+        } else {
+          onMessage(parsed);
         }
       }
     }
