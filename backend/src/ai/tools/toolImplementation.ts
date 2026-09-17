@@ -1,8 +1,7 @@
-import OpenAI from "openai";
 import { Harness } from "../harness/harness";
 import type { ToolImplementation } from "../harness/harness.types";
 import { SUB_AGENT_SYSTEM_PROMPT } from "../prompt/subAgentPrompt";
-import OpenAIProvider from "../providers/openai";
+import { createProvider } from "../providers";
 import { readCommand, subAgentToolsImplementation } from "./subAgentToolImplementation";
 import { subAgentToolDefinition } from "./toolDefinition";
 import { TODO_AGENT_SYSTEM_PROMPT } from "../prompt/todoAgentSystemPrompt";
@@ -16,6 +15,7 @@ const spwaningSubAgent = async (
     emit?: (event: any) => void;
     workspaceRoot?: string;
     sandboxId?: string;
+    provider?: string;
   }
 ) => {
   console.log(`[Spawning Sub Agent] : args are : `, args);
@@ -24,14 +24,15 @@ const spwaningSubAgent = async (
       task: string,
       description: string,
     }
-    const provider = new OpenAIProvider(1, "gpt-4o-mini");
+    const provider = createProvider(options?.provider);
     const harness = new Harness(
       provider,
       subAgentToolDefinition,
       subAgentToolsImplementation,
       SUB_AGENT_SYSTEM_PROMPT.concat(`\nWORKSPACE_ROOT = ${options?.workspaceRoot || "/home/user/next-app"}`),
       options?.emit,
-      options?.sandboxId
+      options?.sandboxId,
+      options?.provider
     );
     const result = await harness.sendMessage(`\n${task}\n${description}`);
     return result || "";
@@ -40,34 +41,30 @@ const spwaningSubAgent = async (
   }
 };
 
-const create_task = async (args: unknown) => {
+const create_task = async (args: unknown, options?: {
+  emit?: (event: any) => void;
+  provider?: string;
+}) => {
   try {
-    const client = new OpenAI();
+    const provider = createProvider(options?.provider);
     const { prompt } = args as {
       prompt: string
     }
-    const messages: any = [{
-      role: "system",
-      content: TODO_AGENT_SYSTEM_PROMPT
-    }, {
-      role: "user",
-      content: prompt
-    }];
+    const result = await provider.chat(
+      [{
+        role: "system",
+        content: TODO_AGENT_SYSTEM_PROMPT
+      }, {
+        role: "user",
+        content: prompt
+      }],
+      [],
+    );
 
-    const response = await client.chat.completions.create({
-      messages,
-      model: "gpt-4o-mini",
-    })
-
-    const choices = response.choices[0];
-    if (choices?.finish_reason == "stop") {
-      const result = choices.message.content;
-      return result as string;
-    }
-    return "NO TODO CREATED";
+    return result?.content || "NO TODO CREATED";
   }
-  catch (error: any) {
-    return error as string
+  catch (error) {
+    return error instanceof Error ? error.message : "NO TODO CREATED";
   }
 }
 

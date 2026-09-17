@@ -76,9 +76,9 @@ export default function PromptPage() {
                       <SelectValue placeholder="Select Provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek (V4 Flash)</SelectItem>
                       <SelectItem value="openai">OpenAI (GPT-4o Mini)</SelectItem>
-                      <SelectItem value="groq">Groq (Llama 3)</SelectItem>
+                      <SelectItem value="groq">Groq (GPT-OSS 120B)</SelectItem>
                     </SelectContent>
                   </Select>
                   <span className="text-[11px] text-zinc-600 font-mono hidden sm:inline-block">

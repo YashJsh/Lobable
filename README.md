@@ -9,7 +9,7 @@ Version 1.0 establishes full-stack integration for user authentication, project 
 ## Key Features
 
 ### 🤖 Multi-Provider AI Orchestration
-*   **Provider Integration:** Instantiates models via OpenAI or Groq dynamically.
+*   **Provider Integration:** Instantiates models via DeepSeek, OpenAI, or Groq dynamically (all OpenAI-compatible). Defaults to DeepSeek `deepseek-v4-flash`.
 *   **Stateless Sub-Agents:** Main agent parses user inputs and spawns targeted sub-agents for writing files, reading code, or executing terminal commands.
 
 ### 🌐 Secure Code Sandbox (E2B)
@@ -58,6 +58,7 @@ Configure `.env` in `backend/`:
 ```env
 DATABASE_URL="postgresql://user:pass@localhost:5432/lobable"
 JWT_SECRET="your-jwt-signing-secret"
+DEEPSEEK_API_KEY="your-deepseek-api-key"
 OPENAI_API_KEY="your-openai-api-key"
 GROQ_API_KEY="your-groq-api-key"
 E2B_API_KEY="your-e2b-api-key"
