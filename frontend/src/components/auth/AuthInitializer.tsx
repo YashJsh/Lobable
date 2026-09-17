@@ -8,13 +8,17 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
   const loadAuth = useAuthStore((state) => state.loadAuth);
   const setAuth = useAuthStore((state) => state.setAuth);
   const logout = useAuthStore((state) => state.logout);
+  const setAuthReady = useAuthStore((state) => state.setAuthReady);
 
   useEffect(() => {
     loadAuth();
 
     const validate = async () => {
       const token = useAuthStore.getState().token;
-      if (!token) return;
+      if (!token) {
+        setAuthReady(true);
+        return;
+      }
 
       try {
         const data = await validateSession();
@@ -25,11 +29,13 @@ export default function AuthInitializer({ children }: { children: React.ReactNod
         }
       } catch {
         logout();
+      } finally {
+        setAuthReady(true);
       }
     };
 
     validate();
-  }, [loadAuth, setAuth, logout]);
+  }, [loadAuth, setAuth, logout, setAuthReady]);
 
   return <>{children}</>;
 }

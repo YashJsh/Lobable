@@ -15,16 +15,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const params = useParams();
   const projectId = params?.projectId as string | undefined;
 
-  const { token, user, logout } = useAuthStore();
+  const { token, user, logout, authReady } = useAuthStore();
   const { projects, fetchProjects, deleteProject, clearActiveProject } = useProjectStore();
 
   useEffect(() => {
+    if (!authReady) return;
     if (!token) {
       router.push("/signin");
       return;
     }
     fetchProjects();
-  }, [token, fetchProjects, router]);
+  }, [authReady, token, fetchProjects, router]);
 
   const handleLogout = () => {
     logout();

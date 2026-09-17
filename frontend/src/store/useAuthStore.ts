@@ -9,14 +9,17 @@ interface User {
 interface AuthState {
   token: string | null;
   user: User | null;
+  authReady: boolean;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
   loadAuth: () => void;
+  setAuthReady: (ready: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
+  authReady: false,
   setAuth: (token, user) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("token", token);
@@ -46,4 +49,5 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ token, user });
     }
   },
+  setAuthReady: (authReady) => set({ authReady }),
 }));
