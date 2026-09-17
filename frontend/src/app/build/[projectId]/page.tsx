@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { getSandboxUrl, submitAnswer, streamAgentCreate, streamAgentUpdate } from "@/api/client";
@@ -14,6 +14,11 @@ function BuildContent() {
   const { projectId } = useParams() as { projectId: string };
   const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState<string | null>(null);
+  const [projectState, setProjectState] = useState<{ id: string; exists: boolean } | null>(null);
+  // Tagging the result with its project id means a stale result from a previous
+  // project can never gate the current one when switching projects.
+  const projectExists =
+    projectState && projectState.id === projectId ? projectState.exists : null;
 
   const {
     messages,
@@ -34,16 +39,46 @@ function BuildContent() {
   const buildStarted = useRef(false);
   const sandboxUrlRef = useRef<string | null>(null);
 
-  // 1. Fetch project details / transcripts from database on mount or route transition
+  // 1. Determine whether this project already exists on the server. This is the
+  //    authoritative signal for whether a build should be started.
   useEffect(() => {
-    if (projectId) {
-      fetchProjectDetails(projectId);
-    }
+    if (!projectId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const exists = await fetchProjectDetails(projectId);
+        if (!cancelled) setProjectState({ id: projectId, exists });
+      } catch {
+        if (cancelled) return;
+        // Fail safe: treat an unknown state as "exists" so we never spin up a
+        // duplicate sandbox, and surface the failure to the user.
+        setProjectState({ id: projectId, exists: true });
+        setStatus("error");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "load-error",
+            role: "status",
+            content: "Failed to load project details. Refresh to retry.",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, fetchProjectDetails, setStatus, setMessages]);
+
+  // Reset shared project state when leaving the workspace or switching projects.
+  useEffect(() => {
     return () => {
       clearActiveProject();
       buildStarted.current = false;
     };
-  }, [projectId, fetchProjectDetails, clearActiveProject]);
+  }, [projectId, clearActiveProject]);
 
   // 2. Fetch initial prompt from search params or session storage
   useEffect(() => {
@@ -56,7 +91,7 @@ function BuildContent() {
     sandboxUrlRef.current = sandboxUrl;
   }, [sandboxUrl]);
 
-  const reloadIframe = () => {
+  const reloadIframe = useCallback(() => {
     const frame = document.getElementById("preview-frame") as HTMLIFrameElement;
     const currentUrl = sandboxUrlRef.current;
     if (frame && currentUrl) {
@@ -68,7 +103,7 @@ function BuildContent() {
         frame.src = currentUrl;
       }
     }
-  };
+  }, []);
 
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,17 +220,7 @@ function BuildContent() {
     fetchUrl();
   }, [projectId, status, sandboxUrl, setSandboxUrl]);
 
-  // Start building when the page mounts with valid parameters (only if no existing messages)
-  useEffect(() => {
-    if (buildStarted.current) return;
-    if (!prompt || !projectId) return;
-    if (messages.length > 0) return; // Prevent double trigger if project is loaded from history
-
-    buildStarted.current = true;
-    startBuild();
-  }, [prompt, projectId, messages.length]);
-
-  const startBuild = async () => {
+  const startBuild = useCallback(async () => {
     if (!prompt || !projectId) return;
 
     setStatus("running");
@@ -287,7 +312,18 @@ function BuildContent() {
         ]);
       }
     );
-  };
+  }, [prompt, projectId, setMessages, setStatus, reloadIframe]);
+
+  // Start a build only for projects the server has confirmed do not exist yet.
+  useEffect(() => {
+    if (projectExists === null) return;
+    // The one-shot prompt is consumed once the project's state is known.
+    sessionStorage.removeItem(`prompt-${projectId}`);
+    if (projectExists) return;
+    if (buildStarted.current || !prompt) return;
+    buildStarted.current = true;
+    void startBuild();
+  }, [projectExists, prompt, projectId, startBuild]);
 
   const handleAnswerSubmit = async (correlationId: string) => {
     const answer = answers[correlationId];

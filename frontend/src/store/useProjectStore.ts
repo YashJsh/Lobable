@@ -23,7 +23,7 @@ interface ProjectState {
   setProvider: (provider: string) => void;
 
   fetchProjects: () => Promise<void>;
-  fetchProjectDetails: (projectId: string) => Promise<void>;
+  fetchProjectDetails: (projectId: string) => Promise<boolean>;
   deleteProject: (projectId: string) => Promise<void>;
   clearActiveProject: () => void;
 }
@@ -89,9 +89,27 @@ export const useProjectStore = create<ProjectState>((set) => ({
         } else {
           set({ messages: [], status: "idle" });
         }
+        return true;
       }
+      return false;
     } catch (err) {
+      // Reset stale state before deciding what this failure means.
+      set({
+        activeProject: null,
+        messages: [],
+        status: "idle",
+        sandboxUrl: null,
+      });
+
+      // A 404 means the project does not exist yet (a brand-new project).
+      // Anything else is a real failure and is rethrown so callers don't
+      // mistake it for a new project and start a duplicate build.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        return false;
+      }
       console.error(`Failed to fetch project details for ${projectId}:`, err);
+      throw err;
     }
   },
 
