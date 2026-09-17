@@ -50,6 +50,19 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   }
 
   const projectId = body.projectId;
+
+  // Project ids are client-generated, so guard against a duplicate create
+  // (e.g. two tabs racing) before spinning up a sandbox.
+  const existingProject = await prisma.project.findUnique({
+    where: { id: projectId },
+  });
+  if (existingProject) {
+    return res.status(409).json({
+      success: false,
+      message: "A project with this id already exists",
+    });
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -63,12 +76,21 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
 
     const projectName = await getProjectName(body.prompt, body.provider);
 
-    await createProject(
-      projectId,
-      projectName,
-      userId,
-      sandboxId
-    );
+    try {
+      await createProject(
+        projectId,
+        projectName,
+        userId,
+        sandboxId
+      );
+    } catch (error) {
+      // Last-resort guard for a race between the check above and the insert.
+      if ((error as { code?: string })?.code === "P2002") {
+        writeStreamError(res, "A project with this id already exists");
+        return;
+      }
+      throw error;
+    }
 
     await saveMessage(projectId, "USER", body.prompt);
     console.log("Saved message Successfully");
