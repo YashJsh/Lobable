@@ -79,17 +79,22 @@ interface StreamFrame extends AgentResponse {
   options?: string[];
 }
 
-export const streamAgentCreate = async (
+interface StreamHandlers {
+  onMessage: (msg: AgentResponse) => void;
+  onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void;
+  onClose: () => void;
+  onError: (err: unknown) => void;
+}
+
+const streamAgent = async (
+  endpoint: "/agent/create" | "/agent/update",
   prompt: string,
   projectId: string,
   provider: string,
-  onMessage: (msg: AgentResponse) => void,
-  onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
-  onClose: () => void,
-  onError: (err: any) => void
+  { onMessage, onQuestion, onClose, onError }: StreamHandlers
 ) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/agent/create`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -158,7 +163,7 @@ export const streamAgentCreate = async (
   }
 };
 
-export const streamAgentUpdate = async (
+export const streamAgentCreate = (
   prompt: string,
   projectId: string,
   provider: string,
@@ -166,76 +171,29 @@ export const streamAgentUpdate = async (
   onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
   onClose: () => void,
   onError: (err: any) => void
-) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/agent/update`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      },
-      body: JSON.stringify({ prompt, projectId, provider }),
-    });
+) =>
+  streamAgent("/agent/create", prompt, projectId, provider, {
+    onMessage,
+    onQuestion,
+    onClose,
+    onError,
+  });
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("No readable stream in response");
-
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() || "";
-
-      for (const part of parts) {
-        const trimmed = part.trim();
-        if (!trimmed) continue;
-
-        let dataStr = "";
-
-        for (const line of trimmed.split("\n")) {
-          if (line.startsWith("data:")) {
-            const content = line.slice(5).trim();
-            dataStr = dataStr ? dataStr + "\n" + content : content;
-          }
-        }
-
-        if (!dataStr) continue;
-
-        let parsed: StreamFrame;
-        try {
-          parsed = JSON.parse(dataStr) as StreamFrame;
-        } catch {
-          console.warn("Skipping malformed SSE frame:", dataStr);
-          continue;
-        }
-
-        if (parsed.error) {
-          onError(new Error(parsed.message || "Agent execution failed"));
-          return;
-        }
-        if (parsed.correlationId && parsed.question) {
-          onQuestion({
-            correlationId: parsed.correlationId,
-            question: parsed.question,
-            options: parsed.suggestions || parsed.options,
-          });
-        } else {
-          onMessage(parsed);
-        }
-      }
-    }
-    onClose();
-  } catch (error) {
-    onError(error);
-  }
-};
+export const streamAgentUpdate = (
+  prompt: string,
+  projectId: string,
+  provider: string,
+  onMessage: (msg: AgentResponse) => void,
+  onQuestion: (q: { correlationId: string; question: string; options?: string[] }) => void,
+  onClose: () => void,
+  onError: (err: any) => void
+) =>
+  streamAgent("/agent/update", prompt, projectId, provider, {
+    onMessage,
+    onQuestion,
+    onClose,
+    onError,
+  });
 
 export const getAllFiles = async (projectId: string) => {
   const response = await fetch(`${API_BASE_URL}/agent/get_all_files?projectId=${projectId}`, {
