@@ -1,25 +1,20 @@
-import Groq from "groq-sdk";
+import { createProvider } from "../ai/providers";
 
-const client = new Groq();
+const NAMING_SYSTEM_PROMPT =
+  "You are a naming agent. The user sends a prompt describing an app. Reply with only a short project name (2-4 words), no quotes, no punctuation, no explanation. Example: 'Build a todo application' -> Todo App";
 
-const getProjectName = async (prompt : string)=>{
-    const response = await client.chat.completions.create({
-        messages : [
-            {
-                role : "system",
-                content : "You are a naming agent. User will send a prompt. You have to return a project name from this. Example : user prompt : Build a todo-application. Your response should be- Todo-app"
-            },
-            {
-                role : "user",
-                content : prompt
-            }
-        ],
-        model : "openai/gpt-oss-20b",
-    })
-    const res = response.choices[0]?.message.content;
-    return res as string;
-}
+const getProjectName = async (prompt: string, providerName?: string): Promise<string> => {
+  const provider = createProvider(providerName);
+  const response = await provider.chat(
+    [
+      { role: "system", content: NAMING_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ],
+    [],
+  );
+  return response?.content?.trim() || "Untitled Project";
+};
 
 export {
-    getProjectName
+  getProjectName
 }

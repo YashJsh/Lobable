@@ -36,7 +36,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
   sandboxUrl: null,
   answers: {},
   submittingAnswerId: null,
-  provider: "gemini",
+  provider: "deepseek",
 
   setProjects: (projects) => set({ projects }),
   setActiveProject: (activeProject) => set({ activeProject }),

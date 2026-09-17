@@ -51,7 +51,8 @@ interface ToolImplementation{
   implementation: (args: unknown, options?: {
     emit?: (event: any) => void,
     workspaceRoot?: string,
-    sandboxId?: string
+    sandboxId?: string,
+    provider?: string,
   }) => Promise<string>,
 }
 

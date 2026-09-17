@@ -1,15 +1,13 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { resolveResponse } from "../utils/pendingResponse";
-import OpenAIProvider from "../ai/providers/openai";
+import { createProvider } from "../ai/providers";
 import { Harness } from "../ai/harness/harness";
 import { toolsDefinition } from "../ai/tools/toolDefinition";
 import { IGNORE, mainAgentTools } from "../ai/tools/toolImplementation";
 import { MAIN_AGENT_SYSTEM_PROMPT } from "../ai/prompt/mainAgentPrompt";
 import { getSandbox, createSandbox } from "../utils/e2b";
 import { saveData } from "../utils/conversation";
-import { GroqProvider } from "../ai/providers/groq";
-import { GeminiProvider } from "../ai/providers/gemini";
 import { createProject, saveMessage } from "../utils/db";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
@@ -56,7 +54,7 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
     const sandboxInstance = await createSandbox();
     const sandboxId = sandboxInstance.sandboxId;
 
-    const projectName = await getProjectName(body.prompt);
+    const projectName = await getProjectName(body.prompt, body.provider);
 
     await createProject(
       projectId,
@@ -74,15 +72,7 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
     await saveMessage(projectId, "USER", body.prompt);
     console.log("Saved message Successfully");
 
-    const reqProvider = body.provider || "gemini";
-    let provider;
-    if (reqProvider === "openai") {
-      provider = new OpenAIProvider(1, "gpt-4o-mini");
-    } else if (reqProvider === "groq") {
-      provider = new GroqProvider(1, "openai/gpt-oss-120b");
-    } else {
-      provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
-    }
+    const provider = createProvider(body.provider, body.model);
 
     const harness = new Harness(
       provider,
@@ -96,7 +86,8 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
           res.write(`data: ${event}\n\n`);
         }
       },
-      sandboxId
+      sandboxId,
+      body.provider
     );
 
     harnessMap.set(projectId, harness);
@@ -139,15 +130,7 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
     let harness = harnessMap.get(projectId);
 
     if (!harness) {
-      const reqProvider = body.provider || "gemini";
-      let provider;
-      if (reqProvider === "openai") {
-        provider = new OpenAIProvider(1, "gpt-4o-mini");
-      } else if (reqProvider === "groq") {
-        provider = new GroqProvider(1, "openai/gpt-oss-120b");
-      } else {
-        provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
-      }
+      const provider = createProvider(body.provider, body.model);
 
       harness = new Harness(
         provider,
@@ -161,7 +144,8 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
             res.write(`data: ${event}\n\n`);
           }
         },
-        sandboxId
+        sandboxId,
+        body.provider
       );
       harnessMap.set(projectId, harness);
     }

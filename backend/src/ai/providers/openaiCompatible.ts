@@ -7,15 +7,30 @@ import type {
   ToolDefiniton,
 } from "../harness/harness.types";
 
-class OpenAIProvider implements ModelProvider {
+interface OpenAICompatibleOptions {
+  apiKey: string;
+  baseURL?: string;
+  extraParams?: Record<string, unknown>;
+}
+
+class OpenAICompatibleProvider implements ModelProvider {
   private client: OpenAI;
   private maxRetries: number;
+  private extraParams: Record<string, unknown>;
   public model: string;
 
-  constructor(maxRetries: number, model: string) {
-    this.client = new OpenAI();
+  constructor(
+    maxRetries: number,
+    model: string,
+    options: OpenAICompatibleOptions,
+  ) {
+    this.client = new OpenAI({
+      apiKey: options.apiKey,
+      baseURL: options.baseURL,
+    });
     this.maxRetries = maxRetries;
     this.model = model;
+    this.extraParams = options.extraParams ?? {};
   }
 
   public name() {
@@ -28,7 +43,7 @@ class OpenAIProvider implements ModelProvider {
   ): Promise<ReturnedResponse | void> {
     const response = await this.chat_implementation(message, tools);
     if (!response) {
-      throw new Error("No response from openAI");
+      throw new Error(`No response from provider (${this.model})`);
     }
     if (response.choices[0]) {
       return {
@@ -49,20 +64,25 @@ class OpenAIProvider implements ModelProvider {
       try {
         return await this.chat_once(message, tools);
       } catch (error) {
-        console.log('OPEN AI ERROR :', error);
-        if (error instanceof Error) console.error(`[OpenAI]  └─ ${error.message}`);
+        console.log(`[${this.model}] PROVIDER ERROR :`, error);
+        if (error instanceof Error) {
+          console.error(`[${this.model}]  └─ ${error.message}`);
+        }
       }
     }
   }
 
   private async chat_once(message: Message[], tools: ToolDefiniton[]) {
-    const response = await this.client.chat.completions.create({
+    const params = {
       model: this.model,
-      messages: message as any,
-      tools: tools as any,
-    });
+      messages: message,
+      tools,
+      ...this.extraParams,
+    };
+    const response = await this.client.chat.completions.create(params as any);
     return response;
   }
 }
 
-export default OpenAIProvider;
+export { OpenAICompatibleProvider };
+export type { OpenAICompatibleOptions };
