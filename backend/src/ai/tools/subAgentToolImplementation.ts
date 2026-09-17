@@ -1,6 +1,7 @@
 import { getSandbox } from "../../utils/e2b";
 import type { ToolImplementation } from "../harness/harness.types";
 import { getAbsolutePath } from "../utils";
+import { getFiles } from "./fileTools";
 
 const bashToolImplementation = async (
   args: unknown,
@@ -94,6 +95,10 @@ const subAgentTools: ToolImplementation[] = [
   {
     name: "read_file",
     implementation: readCommand,
+  },
+  {
+    name: "get_files",
+    implementation: getFiles,
   },
 ];
 

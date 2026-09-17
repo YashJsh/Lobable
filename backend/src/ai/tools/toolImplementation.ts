@@ -6,7 +6,7 @@ import { readCommand, subAgentToolsImplementation } from "./subAgentToolImplemen
 import { subAgentToolDefinition } from "./toolDefinition";
 import { TODO_AGENT_SYSTEM_PROMPT } from "../prompt/todoAgentSystemPrompt";
 import { waitForResponse } from "../../utils/pendingResponse";
-import { getSandbox } from "../../utils/e2b";
+import { getFiles } from "./fileTools";
 
 
 const spwaningSubAgent = async (
@@ -96,25 +96,6 @@ const askQuestions = async (args: unknown, options?: {
     return error as string
   }
 };
-
-export const IGNORE = ['node_modules', '.next', '.npm', '.config', 'public'];
-
-export const getFiles = async (
-  args: unknown,
-  options?: {
-    emit?: (event: any) => void;
-    workspaceRoot?: string;
-    sandboxId?: string;
-  }
-) => {
-  const sandbox = await getSandbox(options?.sandboxId);
-  let all = await sandbox.files.list("/home/user/next-app", { depth: 99 });
-  const filtered_files = all.filter(f => {
-    return !f.path.replace('/home/user/next-app', '').split('/').some(p => IGNORE.includes(p));
-  })
-  return JSON.stringify(filtered_files);
-}
-
 
 const mainAgentTools: ToolImplementation[] = [
   {

@@ -188,7 +188,7 @@ Inspect repository structure.
 read_file:
 Read files required for planning.
 
-create_work_item:
+create_task:
 Create high-level tasks.
 
 sub_agent:

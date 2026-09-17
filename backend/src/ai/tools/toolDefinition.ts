@@ -1,5 +1,25 @@
 import { type ToolDefiniton } from "../harness/harness.types";
 
+const getFilesDefinition: ToolDefiniton = {
+  type: "function",
+  function: {
+    name: "get_files",
+    description:
+      "Lists the files in the project workspace. Optionally pass a directory path to list only that directory.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description:
+            "Optional directory path relative to the workspace root. Omit to list the whole project.",
+        },
+      },
+      required: [],
+    },
+  },
+};
+
 const toolsDefinition: ToolDefiniton[] = [
   {
     type: "function",
@@ -83,23 +103,7 @@ const toolsDefinition: ToolDefiniton[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "get_files",
-      description: "This tool gives the list of files exists in the project",
-      parameters: {
-        type: "object",
-        properties: {
-          path: {
-            type: "string",
-            description: "The path to the file to read",
-          },
-        },
-        required: ["path"],
-      },
-    },
-  },
+  getFilesDefinition,
 ];
 
 const subAgentToolDefinition: ToolDefiniton[] = [
@@ -158,6 +162,7 @@ const subAgentToolDefinition: ToolDefiniton[] = [
       },
     },
   },
+  getFilesDefinition,
 ]
 
 
