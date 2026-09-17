@@ -19,6 +19,21 @@ const router = Router();
 
 export const harnessMap = new Map<string, Harness>();
 
+const finishStream = (res: Response) => {
+  if (!res.writableEnded) {
+    res.end();
+  }
+};
+
+const writeStreamError = (res: Response, message: string) => {
+  try {
+    if (res.writableEnded) return;
+    res.write(`data: ${JSON.stringify({ error: true, message })}\n\n`);
+  } catch (err) {
+    console.error("[Route] Failed to write stream error:", err);
+  }
+};
+
 router.post("/create", authMiddleware, async (req: Request, res: Response) => {
   console.log("****Request Recieved****");
   const body = req.body;
@@ -33,64 +48,71 @@ router.post("/create", authMiddleware, async (req: Request, res: Response) => {
 
   const userId = req.userId!;
 
-  console.log("Calling sandbox first time");
-  const sandboxInstance = await createSandbox();
-  const sandboxId = sandboxInstance.sandboxId;
+  try {
+    console.log("Calling sandbox first time");
+    const sandboxInstance = await createSandbox();
+    const sandboxId = sandboxInstance.sandboxId;
 
-  const projectName = await getProjectName(body.prompt);
-  
-  await createProject(
-    projectId,
-    projectName,
-    userId,
-    sandboxId
-  );
+    const projectName = await getProjectName(body.prompt);
 
-  saveData({
-    username: userId,
-    projectId: body.projectId,
-    createdAt: Date.now().toString()
-  });
+    await createProject(
+      projectId,
+      projectName,
+      userId,
+      sandboxId
+    );
 
-  await saveMessage(projectId, "USER", body.prompt);
-  console.log("Saved message Successfully");
+    saveData({
+      username: userId,
+      projectId: body.projectId,
+      createdAt: Date.now().toString()
+    });
 
-  const reqProvider = body.provider || "gemini";
-  let provider;
-  if (reqProvider === "openai") {
-    provider = new OpenAIProvider(1, "gpt-4o-mini");
-  } else if (reqProvider === "groq") {
-    provider = new GroqProvider(1, "openai/gpt-oss-120b");
-  } else {
-    provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
-  }
-  
-  const harness = new Harness(
-    provider,
-    toolsDefinition,
-    mainAgentTools,
-    MAIN_AGENT_SYSTEM_PROMPT,
-    (event) => {
+    await saveMessage(projectId, "USER", body.prompt);
+    console.log("Saved message Successfully");
+
+    const reqProvider = body.provider || "gemini";
+    let provider;
+    if (reqProvider === "openai") {
+      provider = new OpenAIProvider(1, "gpt-4o-mini");
+    } else if (reqProvider === "groq") {
+      provider = new GroqProvider(1, "openai/gpt-oss-120b");
+    } else {
+      provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
+    }
+
+    const harness = new Harness(
+      provider,
+      toolsDefinition,
+      mainAgentTools,
+      MAIN_AGENT_SYSTEM_PROMPT,
+      (event) => {
         if (typeof event === "string" && event.startsWith("data:")) {
           res.write(event);
         } else {
           res.write(`data: ${event}\n\n`);
         }
-    },
-    sandboxId
-  );
+      },
+      sandboxId
+    );
 
-  harnessMap.set(projectId, harness);
+    harnessMap.set(projectId, harness);
 
-  console.log("Sending to harness");
+    console.log("Sending to harness");
 
-  const response = await harness.sendMessage(body.prompt);
-  if (response) {
-    await saveMessage(projectId, "ASSISTANT", response);
+    const response = await harness.sendMessage(body.prompt);
+    if (response) {
+      await saveMessage(projectId, "ASSISTANT", response);
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Agent execution failed";
+    console.error(`[Route] POST /create | agent error:`, error);
+    writeStreamError(res, message);
+  } finally {
+    console.log(`[Route] POST /create | complete`);
+    finishStream(res);
   }
-
-  console.log(`[Route] POST /create | complete`);
-  res.end();
 });
 
 router.post("/update", authMiddleware, async (req: Request, res: Response) => {
@@ -107,56 +129,63 @@ router.post("/update", authMiddleware, async (req: Request, res: Response) => {
   let harness = harnessMap.get(projectId);
   let sandboxId: string | undefined;
 
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-  });
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
 
-  if (project) {
-    sandboxId = project.sandboxId;
-  }
-
-  if (!harness) {
-    if (!project) {
-      return res.status(404).send("Project not found in database");
+    if (project) {
+      sandboxId = project.sandboxId;
     }
 
-    const reqProvider = body.provider || "gemini";
-    let provider;
-    if (reqProvider === "openai") {
-      provider = new OpenAIProvider(1, "gpt-4o-mini");
-    } else if (reqProvider === "groq") {
-      provider = new GroqProvider(1, "openai/gpt-oss-120b");
-    } else {
-      provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
-    }
+    if (!harness) {
+      if (!project) {
+        return res.status(404).send("Project not found in database");
+      }
 
-    harness = new Harness(
-      provider,
-      toolsDefinition,
-      mainAgentTools,
-      MAIN_AGENT_SYSTEM_PROMPT,
-      (event) => {
+      const reqProvider = body.provider || "gemini";
+      let provider;
+      if (reqProvider === "openai") {
+        provider = new OpenAIProvider(1, "gpt-4o-mini");
+      } else if (reqProvider === "groq") {
+        provider = new GroqProvider(1, "openai/gpt-oss-120b");
+      } else {
+        provider = new GeminiProvider(1, "gemini-3.1-pro-preview");
+      }
+
+      harness = new Harness(
+        provider,
+        toolsDefinition,
+        mainAgentTools,
+        MAIN_AGENT_SYSTEM_PROMPT,
+        (event) => {
           if (typeof event === "string" && event.startsWith("data:")) {
             res.write(event);
           } else {
             res.write(`data: ${event}\n\n`);
           }
-      },
-      sandboxId
-    );
-    harnessMap.set(projectId, harness);
+        },
+        sandboxId
+      );
+      harnessMap.set(projectId, harness);
+    }
+
+    await saveMessage(projectId, "USER", body.prompt);
+
+    const response = await harness.sendMessage(body.prompt);
+
+    if (response) {
+      await saveMessage(projectId, "ASSISTANT", response);
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Agent execution failed";
+    console.error(`[Route] POST /update | agent error:`, error);
+    writeStreamError(res, message);
+  } finally {
+    console.log(`[Route] POST /update | complete`);
+    finishStream(res);
   }
-
-  await saveMessage(projectId, "USER", body.prompt);
-
-  const response = await harness.sendMessage(body.prompt);
-
-  if (response) {
-    await saveMessage(projectId, "ASSISTANT", response);
-  }
-
-  console.log(`[Route] POST /update | complete`);
-  res.end();
 });
 
 router.post("/answer", async (req: Request, res: Response) => {

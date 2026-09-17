@@ -124,6 +124,10 @@ export const streamAgentCreate = async (
         if (dataStr) {
           try {
             const parsed = JSON.parse(dataStr);
+            if (parsed && parsed.error) {
+              onError(new Error(parsed.message || "Agent execution failed"));
+              return;
+            }
             if (parsed.correlationId && parsed.question) {
               onQuestion({
                 correlationId: parsed.correlationId,
@@ -198,6 +202,10 @@ export const streamAgentUpdate = async (
         if (dataStr) {
           try {
             const parsed = JSON.parse(dataStr);
+            if (parsed && parsed.error) {
+              onError(new Error(parsed.message || "Agent execution failed"));
+              return;
+            }
             if (parsed.correlationId && parsed.question) {
               onQuestion({
                 correlationId: parsed.correlationId,

@@ -54,9 +54,8 @@ class Harness {
         this.toolDefinition,
       );
       if (!result) {
-        console.log(`[Harness] No response from AI after turn ${turn}`);
-        return;
-      };
+        throw new Error("No response from the model provider");
+      }
 
       if (this.onEvent) {
         saveData(result);
