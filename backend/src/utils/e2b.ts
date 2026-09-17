@@ -20,3 +20,8 @@ export async function getSandbox(existingSandboxId?: string): Promise<Sandbox> {
   const sandboxInstance = await Sandbox.connect(existingSandboxId);
   return sandboxInstance;
 }
+
+export async function killSandbox(existingSandboxId: string): Promise<void> {
+  console.log(`[E2B] Killing sandbox session: ${existingSandboxId}`);
+  await Sandbox.kill(existingSandboxId);
+}

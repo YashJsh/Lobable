@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { killSandbox } from "../utils/e2b";
 
 const router = Router();
 
@@ -95,6 +96,17 @@ router.delete("/:id", authMiddleware, async (req: Request, res: Response) => {
         where: { id: projectId },
       });
     });
+
+    // Best-effort sandbox teardown. The database records are already gone, so a
+    // failure here must not fail the delete request.
+    try {
+      await killSandbox(project.sandboxId);
+    } catch (error) {
+      console.error(
+        `[Project] Failed to kill sandbox ${project.sandboxId}:`,
+        error
+      );
+    }
 
     return res.status(200).json({
       success: true,
