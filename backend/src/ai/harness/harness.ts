@@ -6,7 +6,6 @@ import type {
 } from "./harness.types";
 import { returnedAssistantMessage, userMessage } from "../utils";
 import { saveData } from "../../utils/conversation";
-import OpenAI from "openai";
 
 class Harness {
   private provider: ModelProvider;
@@ -119,43 +118,43 @@ class Harness {
 
 
   private async compactTranscript() {
-    if (this.transcript.length > 100) {
-      // Keeping the first 10 messages
-      let savedMessages: Message[] = [];
-      const keepFirstCount = Math.min(10, this.transcript.length);
-      for (let i = 0; i < keepFirstCount; i++) {
-        savedMessages.push(this.transcript[i]!);
-      }
+    if (this.transcript.length <= 100) return;
 
-      // Keeping the last 20 messages
-      const keepLastCount = 20;
-      
+    // Keep the first messages (system prompt + initial context) and the most
+    // recent messages, summarizing everything in between.
+    const keepFirstCount = Math.min(10, this.transcript.length);
+    const keepLastCount = 20;
 
-      const middleMessages = this.transcript.slice(keepFirstCount, -keepLastCount);
-      const trailingMessages = this.transcript.slice(-keepLastCount);
+    const savedMessages: Message[] = this.transcript.slice(0, keepFirstCount);
+    const middleMessages = this.transcript.slice(keepFirstCount, -keepLastCount);
+    const trailingMessages = this.transcript.slice(-keepLastCount);
 
-      console.log(`[Harness] Compacting ${middleMessages.length} intermediate messages...`);
-      const response = await this.compact(middleMessages);
-      
-      if (response) {
-        // Append summary as system context
-        savedMessages.push({
-          role: "system",
-          content: `[System Update: The preceding conversation history has been compacted. Summary of progress and choices made during those steps:\n${response}]`,
-        });
-      }
+    console.log(`[Harness] Compacting ${middleMessages.length} intermediate messages...`);
 
-      // Append the active trailing messages back
-      savedMessages.push(...trailingMessages);
-
-      // Replace the transcript with the compacted version
-      this.transcript = savedMessages;
-      console.log(`[Harness] Compacted transcript down to ${this.transcript.length} messages.`);
+    let summary: string | null = null;
+    try {
+      summary = await this.summarize(middleMessages);
+    } catch (error) {
+      // Compaction must never break the turn; fall back to truncation below.
+      console.error("[Harness] Compaction failed, truncating history instead:", error);
     }
+
+    savedMessages.push({
+      role: "system",
+      content: summary
+        ? `[System Update: The preceding conversation history has been compacted. Summary of progress and choices made during those steps:\n${summary}]`
+        : "[System Update: Older conversation history was dropped to stay within context limits. Re-inspect the workspace before relying on prior details.]",
+    });
+
+    // Append the active trailing messages back
+    savedMessages.push(...trailingMessages);
+
+    // Replace the transcript with the compacted version
+    this.transcript = savedMessages;
+    console.log(`[Harness] Compacted transcript down to ${this.transcript.length} messages.`);
   }
 
-  private async compact(messages: Message[]) {
-    const client = new OpenAI();
+  private async summarize(messages: Message[]): Promise<string | null> {
     // Serialize messages cleanly so the LLM doesn't just receive '[object Object]'
     const formattedHistory = messages
       .map((m) => {
@@ -169,25 +168,24 @@ class Harness {
       })
       .join("\n---\n");
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
+    // Reuse the harness's own provider so compaction works regardless of which
+    // provider is configured (previously this hardcoded OpenAI).
+    const result = await this.provider.chat(
+      [
         {
           role: "system",
-          content: "You are a compaction agent. Your job is to take the messages given below and write a highly concise summary of what was accomplished, what files were created or modified, and any architectural decisions made. Keep the summary under 300 words.",
+          content:
+            "You are a compaction agent. Your job is to take the messages given below and write a highly concise summary of what was accomplished, what files were created or modified, and any architectural decisions made. Keep the summary under 300 words.",
         },
         {
           role: "user",
           content: formattedHistory,
         },
       ],
-    });
+      [],
+    );
 
-    let compactMessage;
-    if (response.choices[0]) {
-      compactMessage = response.choices[0].message.content;
-    }
-    return compactMessage;
+    return result?.content ?? null;
   }
 
 }
